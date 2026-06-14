@@ -1,0 +1,17 @@
+{
+  "topic_overview": "artificial intelligence",
+  "research_questions": [
+    "What methods are used to make AI systems explainable?",
+    "How are large language models being applied in practice?",
+    "What are recent advances in deep learning architectures?"
+  ],
+  "question_context": "Prioritize papers with practical methods and reproducible experiments.",
+  "query_hints": [
+    "machine learning",
+    "neural networks",
+    "AI applications"
+  ],
+  "timeline_from_year": 2023,
+  "timeline_to_year": 2026,
+  "min_relevance_score": 0.05
+}

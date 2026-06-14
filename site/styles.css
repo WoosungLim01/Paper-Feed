@@ -1,0 +1,106 @@
+/* ─── Similarity bar animation ─── */
+.similarity-bar {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: barGrow 0.6s ease-out both;
+}
+
+@keyframes barGrow {
+  from { width: 0 !important; }
+}
+
+/* ─── Skeleton pulse animation ─── */
+.skeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeletonPulse {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Source badge color variants ─── */
+.badge-arxiv {
+  background-color: #1d4ed8;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-semantic_scholar {
+  background-color: #15803d;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-openalex {
+  background-color: #6d28d9;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-multi {
+  background-color: #b45309;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ─── Status badge pulse for non-idle states ─── */
+.status-pulse {
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ─── Reject reason badges ─── */
+.badge-below_threshold {
+  background-color: #dc2626;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+}
+
+.badge-outside_timeline {
+  background-color: #d97706;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+}
+
+.badge-missing_metadata {
+  background-color: #6b7280;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+}
+
+/* ─── Dark mode overrides ─── */
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
