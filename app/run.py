@@ -67,6 +67,7 @@ def _print_summary(
     rejected_count: int,
     site_updated: bool,
     cache_status: str,
+    validation: dict | None = None,
 ) -> None:
     w = 36
     line = "─" * w
@@ -78,6 +79,14 @@ def _print_summary(
     print(f"│ {'After dedup':<22}: {dedup_count:<{w-25}}│")
     print(f"│ {'Accepted':<22}: {accepted_count:<{w-25}}│")
     print(f"│ {'Rejected':<22}: {rejected_count:<{w-25}}│")
+    if validation:
+        gap_count = len(validation.get("gaps", []))
+        gap_label = "⚠️ 누락 가능성" if validation.get("has_gaps") else "✅ 정상"
+        sc = validation.get("source_counts", {})
+        print(f"│ {'Date gaps':<22}: {f'{gap_count}일 {gap_label}':<{w-25}}│")
+        print(f"│ {'arXiv':<22}: {sc.get('arxiv', 0):<{w-25}}│")
+        print(f"│ {'S2':<22}: {sc.get('semantic_scholar', 0):<{w-25}}│")
+        print(f"│ {'OpenAlex':<22}: {sc.get('openalex', 0):<{w-25}}│")
     print(f"│ {'Site updated':<22}: {'Yes' if site_updated else 'No':<{w-25}}│")
     print(f"│ {'Scorer':<22}: {'TF-IDF + SBERT (dual)':<{w-25}}│")
     print(f"│ {'Cache':<22}: {cache_status:<{w-25}}│")
@@ -97,11 +106,17 @@ def main() -> None:
         action="store_true",
         help="Reset SBERT embedding cache and re-run",
     )
+    parser.add_argument(
+        "--days-buffer",
+        type=int,
+        default=2,
+        help="날짜 버퍼 (기본 2일 추가, 시차 보정용)",
+    )
     args = parser.parse_args()
 
     data_dir = _cfg.DATA_DIR
     site_dir = _cfg.SITE_DIR
-    days_back = args.days_back if args.days_back is not None else _cfg.DAYS_BACK
+    days_back = (args.days_back if args.days_back is not None else _cfg.DAYS_BACK) + args.days_buffer
     dry_run = args.dry_run
 
     # ── Reset cache (if requested) ───────────────────────────────────────────
@@ -126,8 +141,12 @@ def main() -> None:
         logger.info("  • %s", q)
 
     # 4. Fetch candidates
-    raw_candidates = asyncio.run(fetch_all(config))
+    raw_candidates = asyncio.run(fetch_all(config, days_back=days_back))
     raw_count = len(raw_candidates)
+
+    # Validate fetch results
+    from app.validator import validate_fetch_results
+    validation = validate_fetch_results(raw_candidates, days_back)
 
     source_counts = {
         "arxiv": sum(1 for c in raw_candidates if c.get("source") == "arxiv"),
@@ -198,6 +217,12 @@ def main() -> None:
         "accepted_count": len(accepted),
         "rejected_count": len(rejected),
         "errors": [],
+        "validation": {
+            "total_raw":     validation["total"],
+            "gaps":          validation["gaps"],
+            "has_gaps":      validation["has_gaps"],
+            "source_counts": validation["source_counts"],
+        },
     }
 
     # 13. Publish (unless dry-run)
@@ -234,6 +259,7 @@ def main() -> None:
         rejected_count=len(rejected),
         site_updated=site_updated,
         cache_status=cache_status,
+        validation=validation,
     )
 
 

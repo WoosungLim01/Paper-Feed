@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List
 
 import feedparser
@@ -43,259 +43,420 @@ def _reconstruct_abstract(inverted_index: dict) -> str:
     return " ".join(positions[i] for i in sorted(positions))
 
 
+def _parse_date(date_str: str):
+    """날짜 문자열을 datetime 객체로 파싱."""
+    if not date_str:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d", "%Y"):
+        try:
+            return datetime.strptime(date_str[:len(fmt.replace("%Y", "0000").replace("%m", "00").replace("%d", "00").replace("%H", "00").replace("%M", "00").replace("%S", "00").replace("%z", ""))], fmt).replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+    return None
+
+
+def _normalize_arxiv(entry) -> dict:
+    """arXiv feedparser entry → 표준 candidate dict."""
+    pub_date = None
+    published_str = getattr(entry, "published", None)
+    if published_str:
+        try:
+            pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+        except Exception:
+            pass
+
+    entry_id = getattr(entry, "id", "") or ""
+    arxiv_id = None
+    if "/abs/" in entry_id:
+        arxiv_id = entry_id.split("/abs/")[-1]
+    elif entry_id:
+        arxiv_id = entry_id.split("/")[-1]
+
+    candidate = _empty_candidate()
+    candidate.update({
+        "candidate_id": "arxiv:" + (arxiv_id or entry_id),
+        "title": getattr(entry, "title", "").replace("\n", " ").strip(),
+        "authors": [a.get("name", "") for a in getattr(entry, "authors", [])],
+        "year": pub_date.year if pub_date else None,
+        "date": pub_date.date().isoformat() if pub_date else None,
+        "abstract": getattr(entry, "summary", "").replace("\n", " ").strip(),
+        "url": f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else entry_id,
+        "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else None,
+        "arxiv_id": arxiv_id,
+        "source": "arxiv",
+        "source_hits": ["arxiv"],
+        "raw": dict(entry),
+    })
+    return candidate
+
+
+def _normalize_s2(paper: dict) -> dict:
+    """Semantic Scholar paper dict → 표준 candidate dict."""
+    pub_date_str = paper.get("publicationDate", "")
+    paper_id = paper.get("paperId", "")
+    external_ids = paper.get("externalIds", {}) or {}
+    doi = external_ids.get("DOI")
+    arxiv_id = external_ids.get("ArXiv")
+
+    year = paper.get("year")
+    pub_date_obj = None
+    if pub_date_str:
+        try:
+            pub_date_obj = datetime.strptime(pub_date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if not year:
+                year = pub_date_obj.year
+        except Exception:
+            pass
+
+    candidate = _empty_candidate()
+    candidate.update({
+        "candidate_id": "s2:" + paper_id,
+        "title": (paper.get("title") or "").replace("\n", " ").strip(),
+        "authors": [a.get("name", "") for a in paper.get("authors", [])],
+        "year": year,
+        "date": pub_date_obj.date().isoformat() if pub_date_obj else None,
+        "abstract": (paper.get("abstract") or "").replace("\n", " ").strip(),
+        "url": paper.get("url"),
+        "doi": doi,
+        "arxiv_id": arxiv_id,
+        "semantic_scholar_id": paper_id,
+        "source": "semantic_scholar",
+        "source_hits": ["semantic_scholar"],
+        "raw": paper,
+    })
+    return candidate
+
+
+def _normalize_openalex(work: dict) -> dict | None:
+    """OpenAlex work dict → 표준 candidate dict."""
+    work_id = work.get("id", "")
+    if not work_id:
+        return None
+
+    candidate_id = "openalex:" + work_id.split("/")[-1]
+
+    doi_raw = work.get("doi", "") or ""
+    doi = doi_raw.replace("https://doi.org/", "") if doi_raw else None
+    if doi == "":
+        doi = None
+
+    ids = work.get("ids", {}) or {}
+    arxiv_raw = ids.get("arxiv", "") or ""
+    arxiv_id = arxiv_raw.replace("https://arxiv.org/abs/", "") if arxiv_raw else None
+    if arxiv_id == "":
+        arxiv_id = None
+
+    abstract = _reconstruct_abstract(work.get("abstract_inverted_index") or {})
+
+    authors = [
+        a["author"]["display_name"]
+        for a in work.get("authorships", [])
+        if a.get("author") and a["author"].get("display_name")
+    ]
+
+    primary_loc = work.get("primary_location") or {}
+    url = primary_loc.get("landing_page_url")
+    year = work.get("publication_year")
+    pub_date_str = work.get("publication_date", "")
+
+    candidate = _empty_candidate()
+    candidate.update({
+        "candidate_id": candidate_id,
+        "title": (work.get("title") or "").replace("\n", " ").strip(),
+        "authors": authors,
+        "year": year,
+        "date": pub_date_str[:10] if pub_date_str else None,
+        "abstract": abstract,
+        "url": url,
+        "doi": doi,
+        "arxiv_id": arxiv_id,
+        "openalex_id": work_id,
+        "source": "openalex",
+        "source_hits": ["openalex"],
+        "raw": {k: v for k, v in work.items() if k != "abstract_inverted_index"},
+    })
+    return candidate
+
+
+def build_queries(config: SurveyConfig) -> List[str]:
+    """
+    API 검색용 쿼리 생성.
+    search_keywords 사용 (짧고 명확한 키워드).
+    research_questions 는 자연어라 API 검색에 부적합 → 사용 안 함.
+    조합 쿼리 제외: 중복 노이즈 발생 원인.
+    """
+    keywords = config.search_keywords if config.search_keywords else config.query_hints
+
+    # 개별 키워드만 사용, 중복 제거·순서 유지
+    return list(dict.fromkeys(keywords))
+
+
 async def fetch_arxiv(
     queries: List[str],
     days_back: int = DAYS_BACK,
-    max_results: int = MAX_PER_SOURCE,
+    max_per_query: int = 300,
 ) -> List[dict]:
-    """Fetch papers from arXiv API."""
-    results = []
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days_back)
+    """
+    arXiv API 페이지네이션 적용.
+    날짜 범위 벗어난 논문 만나면 해당 쿼리 중단.
+    쿼리당 최대 300개 상한 (노이즈 방지).
+    rate limit: 요청 사이 3초 대기.
+    """
+    today = date.today()
+    date_from = today - timedelta(days=days_back + 2)  # 2일 버퍼
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+    all_results = []
+
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, follow_redirects=True) as client:
         for query in queries:
-            try:
+            start = 0
+            query_results = []
+
+            while True:
                 params = {
-                    "search_query": "all:" + query,
+                    "search_query": f"all:{query}",
                     "sortBy": "submittedDate",
                     "sortOrder": "descending",
-                    "max_results": max_results,
+                    "start": start,
+                    "max_results": 100,
                 }
-                resp = await client.get(
-                    "https://export.arxiv.org/api/query", params=params
-                )
-                resp.raise_for_status()
-                feed = feedparser.parse(resp.text)
 
-                for entry in feed.entries:
-                    # Parse published date
-                    published_str = getattr(entry, "published", None)
-                    pub_date = None
-                    if published_str:
-                        try:
-                            pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
-                        except Exception:
-                            pass
-
-                    if pub_date and pub_date < cutoff:
-                        continue
-
-                    arxiv_id = None
-                    entry_id = getattr(entry, "id", "") or ""
-                    if "/abs/" in entry_id:
-                        arxiv_id = entry_id.split("/abs/")[-1]
-                    elif entry_id:
-                        arxiv_id = entry_id.split("/")[-1]
-
-                    candidate = _empty_candidate()
-                    candidate.update(
-                        {
-                            "candidate_id": "arxiv:" + (arxiv_id or entry_id),
-                            "title": getattr(entry, "title", "").replace("\n", " ").strip(),
-                            "authors": [
-                                a.get("name", "") for a in getattr(entry, "authors", [])
-                            ],
-                            "year": pub_date.year if pub_date else None,
-                            "abstract": getattr(entry, "summary", "").replace("\n", " ").strip(),
-                            "url": f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else entry_id,
-                            "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else None,
-                            "arxiv_id": arxiv_id,
-                            "source": "arxiv",
-                            "source_hits": ["arxiv"],
-                            "raw": dict(entry),
-                        }
+                try:
+                    resp = await client.get(
+                        "https://export.arxiv.org/api/query",
+                        params=params,
                     )
-                    results.append(candidate)
-                    logger.debug("arXiv: %s", candidate["title"][:60])
+                    feed = feedparser.parse(resp.text)
+                    entries = feed.entries
 
-            except Exception as e:
-                logger.warning("arXiv query '%s' failed: %s", query, e)
+                    if not entries:
+                        break
 
-    logger.info("arXiv: fetched %d candidates", len(results))
-    return results
+                    hit_old = False
+                    for entry in entries:
+                        pub_date = None
+                        published_str = getattr(entry, "published", None)
+                        if published_str:
+                            try:
+                                pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+                            except Exception:
+                                pass
+                        if pub_date and pub_date.date() < date_from:
+                            hit_old = True
+                            break
+                        if pub_date:
+                            query_results.append(_normalize_arxiv(entry))
+
+                    if hit_old or len(entries) < 100:
+                        break
+
+                    start += 100
+                    if start >= max_per_query:  # 쿼리당 상한 도달
+                        break
+                    await asyncio.sleep(3)
+
+                except Exception as e:
+                    print(f"[arXiv] 오류 ({query}): {e}")
+                    break
+
+            print(f"[arXiv] '{query}' → {len(query_results)}개")
+            all_results.extend(query_results)
+            await asyncio.sleep(3)
+
+    return all_results
 
 
 async def fetch_semantic_scholar(
     queries: List[str],
     days_back: int = DAYS_BACK,
-    max_results: int = MAX_PER_SOURCE,
+    max_per_query: int = 200,
 ) -> List[dict]:
-    """Fetch papers from Semantic Scholar API."""
-    results = []
-    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days_back)).date()
+    """
+    Semantic Scholar API 페이지네이션.
+    API 키 환경변수: S2_API_KEY 또는 SEMANTIC_SCHOLAR_API_KEY.
+    429 에러 시 60초 대기 후 재시도.
+    최대 200개까지 수집 (rate limit 과부하 방지).
+    """
+    today = date.today()
+    date_from = today - timedelta(days=days_back + 2)
 
-    headers = {}
-    api_key = os.environ.get("S2_API_KEY")
-    if api_key:
-        headers["x-api-key"] = api_key
-        logger.info("Semantic Scholar: using API key")
-    else:
-        logger.warning("Semantic Scholar: no API key set (S2_API_KEY), rate limits may apply")
+    api_key = os.getenv("S2_API_KEY", os.getenv("SEMANTIC_SCHOLAR_API_KEY", ""))
+    headers = {"x-api-key": api_key} if api_key else {}
 
-    # Server-side year filter: e.g. "2023-2026"
-    from_year = cutoff.year
-    to_year = datetime.now(tz=timezone.utc).year
-    year_filter = f"{from_year}-{to_year}"
+    all_results = []
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, headers=headers) as client:
-        # S2 rate limit: 1 req/sec — cap to 4 most important queries
-        s2_queries = queries[:4]
-        for i, query in enumerate(s2_queries):
-            if i > 0:
-                await asyncio.sleep(2.0)
-            try:
+    async with httpx.AsyncClient(headers=headers, timeout=REQUEST_TIMEOUT) as client:
+        for query in queries:
+            offset = 0
+            query_results = []
+
+            while True:
                 params = {
                     "query": query,
-                    "fields": "paperId,title,abstract,year,publicationDate,authors,url,externalIds",
-                    "limit": max_results,
-                    "year": year_filter,       # server-side year filter
-                    "sort": "citationCount",   # most cited first = higher quality
+                    "fields": (
+                        "paperId,title,abstract,year,publicationDate,"
+                        "authors,url,externalIds,citationCount"
+                    ),
+                    "limit": 100,
+                    "offset": offset,
                 }
-                # Retry up to 3 times on 429
-                data = None
-                for attempt in range(3):
+
+                try:
                     resp = await client.get(
                         "https://api.semanticscholar.org/graph/v1/paper/search",
                         params=params,
                     )
+
                     if resp.status_code == 429:
-                        wait = 2 ** attempt * 2  # 2s, 4s, 8s
-                        logger.warning("Semantic Scholar 429 on '%s', retrying in %ds (attempt %d/3)", query[:40], wait, attempt + 1)
-                        await asyncio.sleep(wait)
+                        print("[S2] Rate limit → 60초 대기")
+                        await asyncio.sleep(60)
                         continue
-                    resp.raise_for_status()
+
+                    if resp.status_code != 200:
+                        print(f"[S2] 오류 {resp.status_code} ({query})")
+                        break
+
                     data = resp.json()
+                    papers = data.get("data", [])
+                    total = data.get("total", 0)
+
+                    if not papers:
+                        break
+
+                    for p in papers:
+                        pub_date = None
+                        pub_date_str = p.get("publicationDate", "")
+                        if pub_date_str:
+                            try:
+                                pub_date = datetime.strptime(pub_date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                            except Exception:
+                                pass
+                        # publicationDate 없는 논문은 날짜 불명 → 포함 (year 필터는 scorer 단계)
+                        if pub_date is None or pub_date.date() >= date_from:
+                            query_results.append(_normalize_s2(p))
+
+                    offset += len(papers)
+                    if offset >= min(total, max_per_query) or len(papers) < 100:
+                        break
+
+                    await asyncio.sleep(1.5)
+
+                except Exception as e:
+                    print(f"[S2] 오류 ({query}): {e}")
                     break
-                if data is None:
-                    logger.warning("Semantic Scholar query '%s' failed after retries", query[:40])
-                    continue
 
-                for paper in data.get("data", []):
-                    pub_date_str = paper.get("publicationDate")
+            print(f"[S2] '{query}' → {len(query_results)}개")
+            all_results.extend(query_results)
+            await asyncio.sleep(2)
 
-                    paper_id = paper.get("paperId", "")
-                    external_ids = paper.get("externalIds", {}) or {}
-                    doi = external_ids.get("DOI")
-                    arxiv_id = external_ids.get("ArXiv")
-
-                    year = paper.get("year")
-                    if not year and pub_date_str:
-                        try:
-                            year = int(pub_date_str[:4])
-                        except Exception:
-                            pass
-
-                    candidate = _empty_candidate()
-                    candidate.update(
-                        {
-                            "candidate_id": "s2:" + paper_id,
-                            "title": (paper.get("title") or "").replace("\n", " ").strip(),
-                            "authors": [
-                                a.get("name", "") for a in paper.get("authors", [])
-                            ],
-                            "year": year,
-                            "abstract": (paper.get("abstract") or "").replace("\n", " ").strip(),
-                            "url": paper.get("url"),
-                            "doi": doi,
-                            "arxiv_id": arxiv_id,
-                            "semantic_scholar_id": paper_id,
-                            "source": "semantic_scholar",
-                            "source_hits": ["semantic_scholar"],
-                            "raw": paper,
-                        }
-                    )
-                    results.append(candidate)
-
-            except Exception as e:
-                logger.warning("Semantic Scholar query '%s' failed: %s", query, e)
-
-    logger.info("Semantic Scholar: fetched %d candidates", len(results))
-    return results
+    return all_results
 
 
 async def fetch_openalex(
     queries: List[str],
     days_back: int = DAYS_BACK,
-    max_results: int = MAX_PER_SOURCE,
+    max_per_query: int = 200,
 ) -> List[dict]:
-    """Fetch papers from OpenAlex API."""
-    results = []
-    from_date = (datetime.now(tz=timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    """
+    OpenAlex API 페이지네이션.
+    날짜 범위를 API 파라미터로 직접 전달 (가장 정확).
+    최대 3페이지(600개)까지 수집 (타임아웃·rate limit 방지).
+    abstract_inverted_index 없는 논문도 수집 (제목만으로 유사도 계산 가능).
+    """
+    today = date.today()
+    date_from = today - timedelta(days=days_back + 2)
+    date_filter = (
+        f"from_publication_date:{date_from.isoformat()},"
+        f"to_publication_date:{today.isoformat()}"
+    )
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+    all_results = []
+
+    oa_timeout = httpx.Timeout(30.0)  # OpenAlex는 30초 타임아웃 적용
+    async with httpx.AsyncClient(timeout=oa_timeout) as client:
         for query in queries:
-            try:
-                clean_query = _sanitize_query(query)
-                if not clean_query:
-                    continue
+            page = 1
+            query_results = []
+
+            while True:
                 params = {
-                    "search": clean_query,
-                    "filter": f"from_publication_date:{from_date}",
+                    "search": query,
+                    "filter": date_filter,
                     "sort": "publication_date:desc",
-                    "per_page": max_results,
-                    "select": "id,title,authorships,publication_year,publication_date,abstract_inverted_index,primary_location,doi,ids",
+                    "per_page": 200,
+                    "page": page,
+                    "select": (
+                        "id,title,authorships,publication_year,"
+                        "publication_date,abstract_inverted_index,"
+                        "primary_location,doi,ids"
+                    ),
                 }
-                resp = await client.get(
-                    "https://api.openalex.org/works", params=params
-                )
-                resp.raise_for_status()
-                data = resp.json()
 
-                for work in data.get("results", []):
-                    work_id = work.get("id", "")
-                    openalex_id = work_id
-                    candidate_id = "openalex:" + work_id.split("/")[-1]
-
-                    doi_raw = work.get("doi", "") or ""
-                    doi = doi_raw.replace("https://doi.org/", "") if doi_raw else None
-                    if doi == "":
-                        doi = None
-
-                    ids = work.get("ids", {}) or {}
-                    arxiv_raw = ids.get("arxiv", "") or ""
-                    arxiv_id = arxiv_raw.replace("https://arxiv.org/abs/", "") if arxiv_raw else None
-                    if arxiv_id == "":
-                        arxiv_id = None
-
-                    abstract = _reconstruct_abstract(
-                        work.get("abstract_inverted_index") or {}
+                try:
+                    resp = await client.get(
+                        "https://api.openalex.org/works",
+                        params=params,
+                        headers={"User-Agent": "PaperFeed/1.0 (research project)"},
                     )
 
-                    authors = [
-                        a["author"]["display_name"]
-                        for a in work.get("authorships", [])
-                        if a.get("author") and a["author"].get("display_name")
-                    ]
+                    if resp.status_code == 429:
+                        print(f"[OpenAlex] Rate limit → 30초 대기")
+                        await asyncio.sleep(30)
+                        continue
 
-                    primary_loc = work.get("primary_location") or {}
-                    url = primary_loc.get("landing_page_url")
+                    if resp.status_code != 200:
+                        print(f"[OpenAlex] 오류 {resp.status_code} ({query})")
+                        break
 
-                    year = work.get("publication_year")
+                    data = resp.json()
+                    works = data.get("results", [])
+                    meta = data.get("meta", {})
 
-                    candidate = _empty_candidate()
-                    candidate.update(
-                        {
-                            "candidate_id": candidate_id,
-                            "title": (work.get("title") or "").replace("\n", " ").strip(),
-                            "authors": authors,
-                            "year": year,
-                            "abstract": abstract,
-                            "url": url,
-                            "doi": doi,
-                            "arxiv_id": arxiv_id,
-                            "openalex_id": openalex_id,
-                            "source": "openalex",
-                            "source_hits": ["openalex"],
-                            "raw": {k: v for k, v in work.items() if k != "abstract_inverted_index"},
-                        }
-                    )
-                    results.append(candidate)
+                    if not works:
+                        break
 
-            except Exception as e:
-                logger.warning("OpenAlex query '%s' failed: %s", query, e)
+                    for w in works:
+                        normalized = _normalize_openalex(w)
+                        if normalized:
+                            query_results.append(normalized)
 
-    logger.info("OpenAlex: fetched %d candidates", len(results))
-    return results
+                    total_count = meta.get("count", 0)
+                    total_pages = (total_count // 200) + 1
+
+                    if page >= total_pages or page >= 3:
+                        break
+
+                    page += 1
+                    await asyncio.sleep(1)
+
+                except httpx.ReadTimeout:
+                    print(f"[OpenAlex] Timeout ({query}) → 15초 대기 후 재시도")
+                    await asyncio.sleep(15)
+                    # 타임아웃은 1회 재시도 후 중단
+                    try:
+                        resp = await client.get(
+                            "https://api.openalex.org/works",
+                            params=params,
+                            headers={"User-Agent": "PaperFeed/1.0 (research project)"},
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            for w in data.get("results", []):
+                                normalized = _normalize_openalex(w)
+                                if normalized:
+                                    query_results.append(normalized)
+                    except Exception:
+                        pass
+                    break
+                except Exception as e:
+                    print(f"[OpenAlex] 오류 ({query}): {e}")
+                    break
+
+            print(f"[OpenAlex] '{query}' → {len(query_results)}개")
+            all_results.extend(query_results)
+            await asyncio.sleep(1)
+
+    return all_results
 
 
 def _sanitize_query(q: str) -> str:
@@ -304,37 +465,37 @@ def _sanitize_query(q: str) -> str:
     return re.sub(r"[?!.,;:()\[\]{}\"'\\]", " ", q).strip()
 
 
-def build_queries(config: SurveyConfig) -> List[str]:
-    """Build deterministic query list from config."""
-    queries = []
-    queries.append(config.topic_overview)
-    for rq in config.research_questions:
-        queries.append(rq)
-    for hint in config.query_hints:
-        queries.append(hint)
-    combined = config.topic_overview + " " + " ".join(config.query_hints)
-    queries.append(combined)
-    return list(dict.fromkeys(queries))  # deduplicate while preserving order
-
-
-async def fetch_all(config: SurveyConfig) -> List[dict]:
-    """Fetch from all three sources concurrently."""
+async def fetch_all(config: SurveyConfig, days_back: int = DAYS_BACK) -> List[dict]:
+    """세 소스 동시 수집 + 소스별 통계 출력"""
     queries = build_queries(config)
+    print(f"\n[수집] 쿼리 {len(queries)}개:")
+    for q in queries:
+        print(f"  - {q}")
 
     results = await asyncio.gather(
-        fetch_arxiv(queries, DAYS_BACK, MAX_PER_SOURCE),
-        fetch_semantic_scholar(queries, DAYS_BACK, MAX_PER_SOURCE),
-        fetch_openalex(queries, DAYS_BACK, MAX_PER_SOURCE),
+        fetch_arxiv(queries, days_back),
+        fetch_semantic_scholar(queries, days_back),
+        fetch_openalex(queries, days_back),
         return_exceptions=True,
     )
 
-    all_candidates = []
-    source_names = ["arxiv", "semantic_scholar", "openalex"]
-    for i, result in enumerate(results):
-        if isinstance(result, Exception):
-            logger.error("Source %s failed: %s", source_names[i], result)
-        else:
-            logger.info("Source %s: %d papers", source_names[i], len(result))
-            all_candidates.extend(result)
+    arxiv_papers = results[0] if not isinstance(results[0], Exception) else []
+    s2_papers    = results[1] if not isinstance(results[1], Exception) else []
+    oa_papers    = results[2] if not isinstance(results[2], Exception) else []
 
-    return all_candidates
+    if isinstance(results[0], Exception):
+        print(f"[arXiv] 실패: {results[0]}")
+    if isinstance(results[1], Exception):
+        print(f"[S2] 실패: {results[1]}")
+    if isinstance(results[2], Exception):
+        print(f"[OpenAlex] 실패: {results[2]}")
+
+    print(f"\n[수집 결과]")
+    print(f"  arXiv     : {len(arxiv_papers)}개")
+    print(f"  S2        : {len(s2_papers)}개")
+    print(f"  OpenAlex  : {len(oa_papers)}개")
+
+    all_papers = arxiv_papers + s2_papers + oa_papers
+    print(f"  합계      : {len(all_papers)}개 (중복 제거 전)\n")
+
+    return all_papers

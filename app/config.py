@@ -19,6 +19,7 @@ class SurveyConfig:
     timeline_from_year: int
     timeline_to_year: int
     min_relevance_score: float
+    search_keywords: List[str] = field(default_factory=list)
 
 
 def load_config(data_dir: str = DATA_DIR) -> SurveyConfig:
@@ -30,6 +31,7 @@ def load_config(data_dir: str = DATA_DIR) -> SurveyConfig:
         research_questions=raw.get("research_questions", []),
         question_context=raw.get("question_context", ""),
         query_hints=raw.get("query_hints", []),
+        search_keywords=raw.get("search_keywords", raw.get("query_hints", [])),
         timeline_from_year=raw.get("timeline_from_year", 2020),
         timeline_to_year=raw.get("timeline_to_year", 2030),
         min_relevance_score=raw.get("min_relevance_score", 0.05),
