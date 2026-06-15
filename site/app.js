@@ -1,6 +1,6 @@
 // PaperFeed — client-side React app
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -636,6 +636,397 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted, s
   );
 }
 
+// ─── ChartCanvas ─────────────────────────────────────────────────────────────
+// Thin wrapper: creates/destroys a Chart.js instance when deps change.
+
+function ChartCanvas({ builder, deps, style }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || typeof Chart === "undefined") return;
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+    chartRef.current = builder(canvasRef.current);
+    return () => {
+      if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+    };
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (typeof Chart === "undefined") {
+    return <p className="text-xs text-gray-400 py-8 text-center">Loading Chart.js...</p>;
+  }
+  return <canvas ref={canvasRef} style={style} />;
+}
+
+// ─── AnalyticsCard ────────────────────────────────────────────────────────────
+
+function AnalyticsCard({ title, subtitle, children, className = "" }) {
+  return (
+    <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 ${className}`}>
+      {title && (
+        <div className="mb-4">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+// ─── AnalyticsPage ────────────────────────────────────────────────────────────
+
+function AnalyticsPage({ papers, rejects, history, starred, darkMode }) {
+  const txt  = darkMode ? "#9ca3af" : "#6b7280";
+  const grid = darkMode ? "#374151" : "#e5e7eb";
+  const bg   = darkMode ? "#1f2937" : "#ffffff";
+
+  /* ── derived data ──────────────────────────────────────────────────────── */
+
+  // Accepted papers by source (multi-source papers counted in each)
+  const srcAcc = { arxiv: 0, semantic_scholar: 0, openalex: 0 };
+  for (const p of papers) {
+    const srcs = p.source_hits || [p.source].filter(Boolean);
+    for (const s of srcs) if (s in srcAcc) srcAcc[s]++;
+  }
+
+  // Total raw fetched by source (aggregated from run_history)
+  const srcFetch = { arxiv: 0, semantic_scholar: 0, openalex: 0 };
+  for (const r of history) {
+    const sc = r.source_counts || {};
+    for (const k of Object.keys(srcFetch)) srcFetch[k] += sc[k] || 0;
+  }
+
+  // Rejection reasons
+  const rjMap = { below_threshold: 0, outside_timeline: 0, missing_metadata: 0 };
+  for (const r of rejects) {
+    const k = r.reject_reason || "unknown";
+    if (k in rjMap) rjMap[k]++;
+  }
+
+  // Publication year distribution
+  const yearMap = {};
+  for (const p of papers) {
+    const yr = p.year || (p.publication_date ? new Date(p.publication_date).getFullYear() : null);
+    if (yr && yr > 2000 && yr <= 2030) yearMap[yr] = (yearMap[yr] || 0) + 1;
+  }
+  const years = Object.keys(yearMap).sort();
+
+  // Recent runs (last 8)
+  const runs     = history.slice(-8);
+  const runLabels = runs.map((_, i) => `#${history.length - runs.length + i + 1}`);
+  const runDates  = runs.map(r => r.timestamp ? new Date(r.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
+
+  // Acceptance rate per run
+  const acceptRates = runs.map(r =>
+    r.raw_count > 0 ? +((r.accepted_count / r.raw_count) * 100).toFixed(1) : 0
+  );
+
+  // Score histogram buckets (10 bins: 0-10%, 10-20%, …)
+  function toBuckets(vals) {
+    const b = Array(10).fill(0);
+    for (const v of vals) b[Math.min(Math.floor(v * 10), 9)]++;
+    return b;
+  }
+  const tfidfB = toBuckets(papers.map(p => p.tfidf_score ?? p.score).filter(v => v != null));
+  const sbertB = toBuckets(papers.map(p => p.sbert_score).filter(v => v != null));
+  const bucketLbls = ["0","10","20","30","40","50","60","70","80","90"].map(n => n + "%");
+
+  // Scorer distribution across runs
+  const scorerCounts = {};
+  for (const r of history) {
+    const s = r.scorer || "unknown";
+    scorerCounts[s] = (scorerCounts[s] || 0) + 1;
+  }
+
+  // Summary numbers
+  const totalRaw   = history.reduce((s, r) => s + (r.raw_count || 0), 0);
+  const totalDedup = history.reduce((s, r) => s + (r.dedup_count || 0), 0);
+  const avgAccept  = runs.length
+    ? (runs.reduce((s, r) => s + (r.raw_count > 0 ? r.accepted_count / r.raw_count : 0), 0) / runs.length * 100).toFixed(1)
+    : "—";
+  const dedupRate  = totalRaw > 0 ? ((1 - totalDedup / totalRaw) * 100).toFixed(1) : "—";
+
+  const deps = [papers.length, rejects.length, history.length, darkMode];
+
+  /* ── chart builders ─────────────────────────────────────────────────────── */
+
+  // 1. Accepted papers by source — doughnut
+  const srcDonut = cv => new Chart(cv, {
+    type: "doughnut",
+    data: {
+      labels: ["arXiv", "Semantic Scholar", "OpenAlex"],
+      datasets: [{
+        data: [srcAcc.arxiv, srcAcc.semantic_scholar, srcAcc.openalex],
+        backgroundColor: ["#6366f1", "#22c55e", "#f59e0b"],
+        borderColor: bg, borderWidth: 3,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      cutout: "68%", responsive: true,
+      plugins: {
+        legend: { position: "bottom", labels: { color: txt, font: { size: 11 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} papers` } },
+      },
+    },
+  });
+
+  // 2. Rejection reasons — doughnut
+  const rjDonut = cv => new Chart(cv, {
+    type: "doughnut",
+    data: {
+      labels: ["Below threshold", "Outside timeline", "Missing metadata"],
+      datasets: [{
+        data: [rjMap.below_threshold, rjMap.outside_timeline, rjMap.missing_metadata],
+        backgroundColor: ["#ef4444", "#f97316", "#a855f7"],
+        borderColor: bg, borderWidth: 3,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      cutout: "68%", responsive: true,
+      plugins: {
+        legend: { position: "bottom", labels: { color: txt, font: { size: 11 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} papers` } },
+      },
+    },
+  });
+
+  // 3. Pipeline funnel per run — grouped bar
+  const pipelineBar = cv => new Chart(cv, {
+    type: "bar",
+    data: {
+      labels: runDates.length ? runDates : runLabels,
+      datasets: [
+        { label: "Raw fetched", data: runs.map(r => r.raw_count    || 0), backgroundColor: "rgba(148,163,184,0.75)", borderRadius: 3 },
+        { label: "After dedup", data: runs.map(r => r.dedup_count  || 0), backgroundColor: "rgba(96,165,250,0.8)",   borderRadius: 3 },
+        { label: "Accepted",    data: runs.map(r => r.accepted_count || 0), backgroundColor: "rgba(52,211,153,0.85)", borderRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: txt, font: { size: 11 } }, grid: { color: grid } },
+        y: { ticks: { color: txt }, grid: { color: grid } },
+      },
+      plugins: { legend: { labels: { color: txt, font: { size: 11 }, padding: 12 } } },
+    },
+  });
+
+  // 4. Acceptance rate trend — line
+  const trendLine = cv => new Chart(cv, {
+    type: "line",
+    data: {
+      labels: runDates.length ? runDates : runLabels,
+      datasets: [{
+        label: "Acceptance rate (%)",
+        data: acceptRates,
+        borderColor: "#6366f1",
+        backgroundColor: "rgba(99,102,241,0.10)",
+        fill: true, tension: 0.35,
+        pointRadius: 5, pointBackgroundColor: "#6366f1",
+        pointHoverRadius: 7,
+      }],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: txt, font: { size: 11 } }, grid: { color: grid } },
+        y: { min: 0, ticks: { color: txt, callback: v => v + "%" }, grid: { color: grid } },
+      },
+      plugins: { legend: { labels: { color: txt, font: { size: 11 } } } },
+    },
+  });
+
+  // 5. Score distribution histogram — bar (TF-IDF + SBERT)
+  const hasTfidf = tfidfB.some(v => v > 0);
+  const hasSbert = sbertB.some(v => v > 0);
+  const scoreHist = cv => new Chart(cv, {
+    type: "bar",
+    data: {
+      labels: bucketLbls,
+      datasets: [
+        ...(hasTfidf ? [{ label: "TF-IDF", data: tfidfB, backgroundColor: "rgba(99,102,241,0.7)",  borderRadius: 3 }] : []),
+        ...(hasSbert ? [{ label: "SBERT",  data: sbertB, backgroundColor: "rgba(192,132,252,0.7)", borderRadius: 3 }] : []),
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: txt, font: { size: 10 } }, grid: { color: grid } },
+        y: { ticks: { color: txt }, grid: { color: grid } },
+      },
+      plugins: { legend: { labels: { color: txt, font: { size: 11 } } } },
+    },
+  });
+
+  // 6. Papers by publication year — bar
+  const yearBar = cv => new Chart(cv, {
+    type: "bar",
+    data: {
+      labels: years,
+      datasets: [{
+        label: "Papers",
+        data: years.map(y => yearMap[y]),
+        backgroundColor: years.map((_, i) =>
+          `hsl(${230 + i * 8}, 70%, ${darkMode ? 60 : 55}%)`
+        ),
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: txt }, grid: { color: grid } },
+        y: { ticks: { color: txt }, grid: { color: grid } },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+
+  // 7. Fetched vs Accepted by source — grouped bar
+  const srcCompare = cv => new Chart(cv, {
+    type: "bar",
+    data: {
+      labels: ["arXiv", "Semantic Scholar", "OpenAlex"],
+      datasets: [
+        { label: "Total fetched (Raw)", data: [srcFetch.arxiv, srcFetch.semantic_scholar, srcFetch.openalex], backgroundColor: "rgba(148,163,184,0.7)", borderRadius: 4 },
+        { label: "Accepted",            data: [srcAcc.arxiv,   srcAcc.semantic_scholar,   srcAcc.openalex],   backgroundColor: "rgba(52,211,153,0.85)",  borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { ticks: { color: txt }, grid: { color: grid } },
+        y: { ticks: { color: txt }, grid: { color: grid } },
+      },
+      plugins: { legend: { labels: { color: txt, font: { size: 11 }, padding: 12 } } },
+    },
+  });
+
+  /* ── render ─────────────────────────────────────────────────────────────── */
+
+  const statCards = [
+    { label: "Accepted papers",  value: papers.length,   color: "text-indigo-600 dark:text-indigo-400", sub: `★ ${starred.size} starred` },
+    { label: "Pipeline runs",    value: history.length,  color: "text-blue-600 dark:text-blue-400",    sub: "total executions" },
+    { label: "Rejected papers",  value: rejects.length,  color: "text-red-500 dark:text-red-400",      sub: `of ${totalRaw.toLocaleString()} raw` },
+    { label: "Avg accept rate",  value: avgAccept + "%", color: "text-green-600 dark:text-green-400",  sub: `dedup rate ${dedupRate}%` },
+  ];
+
+  return (
+    <div className="h-full overflow-y-auto p-6 bg-gray-50 dark:bg-gray-950">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Pipeline performance &amp; collection insights
+        </p>
+      </div>
+
+      {/* ── Stat Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {statCards.map(({ label, value, color, sub }) => (
+          <div key={label} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Row 1: Source donut + Rejection donut ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+        <AnalyticsCard title="Accepted papers by source" subtitle="Papers accepted from each data source">
+          <ChartCanvas builder={srcDonut} deps={deps} style={{ maxHeight: 250 }} />
+        </AnalyticsCard>
+        <AnalyticsCard title="Rejection reasons" subtitle={`${rejects.length} papers rejected total`}>
+          <ChartCanvas builder={rjDonut} deps={deps} style={{ maxHeight: 250 }} />
+        </AnalyticsCard>
+      </div>
+
+      {/* ── Row 2: Pipeline funnel per run ── */}
+      <AnalyticsCard
+        title="Pipeline funnel per run"
+        subtitle="Last 8 runs — Raw → Dedup → Accepted flow"
+        className="mb-5"
+      >
+        <ChartCanvas builder={pipelineBar} deps={deps} style={{ maxHeight: 290 }} />
+      </AnalyticsCard>
+
+      {/* ── Row 3: Acceptance rate trend ── */}
+      <AnalyticsCard
+        title="Acceptance rate trend"
+        subtitle="Percentage of raw-fetched papers accepted per run"
+        className="mb-5"
+      >
+        <ChartCanvas builder={trendLine} deps={deps} style={{ maxHeight: 230 }} />
+      </AnalyticsCard>
+
+      {/* ── Row 4: Score histogram + Year distribution ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+        <AnalyticsCard title="Score distribution (accepted)" subtitle="Papers per score bucket — TF-IDF vs SBERT">
+          <ChartCanvas builder={scoreHist} deps={deps} style={{ maxHeight: 230 }} />
+        </AnalyticsCard>
+        <AnalyticsCard title="Papers by publication year" subtitle="Accepted papers only">
+          <ChartCanvas builder={yearBar} deps={deps} style={{ maxHeight: 230 }} />
+        </AnalyticsCard>
+      </div>
+
+      {/* ── Row 5: Source fetch vs accept comparison ── */}
+      <AnalyticsCard
+        title="Fetched vs. accepted by source"
+        subtitle="Cumulative across all runs — which source actually delivers?"
+        className="mb-6"
+      >
+        <ChartCanvas builder={srcCompare} deps={deps} style={{ maxHeight: 260 }} />
+      </AnalyticsCard>
+
+      {/* ── Row 6: Quick insight cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Top source</p>
+          {(() => {
+            const top = Object.entries(srcAcc).sort((a,b) => b[1]-a[1])[0];
+            const labels = { arxiv: "arXiv", semantic_scholar: "Semantic Scholar", openalex: "OpenAlex" };
+            return top ? (
+              <>
+                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{labels[top[0]] || top[0]}</p>
+                <p className="text-xs text-gray-400 mt-1">{top[1]} papers accepted</p>
+              </>
+            ) : <p className="text-gray-400 text-sm">No data</p>;
+          })()}
+        </div>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Top reject reason</p>
+          {(() => {
+            const top = Object.entries(rjMap).sort((a,b) => b[1]-a[1])[0];
+            const labels = { below_threshold: "Below threshold", outside_timeline: "Outside timeline", missing_metadata: "Missing metadata" };
+            return top && top[1] > 0 ? (
+              <>
+                <p className="text-lg font-bold text-red-500 dark:text-red-400">{labels[top[0]] || top[0]}</p>
+                <p className="text-xs text-gray-400 mt-1">{top[1]} papers ({rejects.length > 0 ? ((top[1]/rejects.length)*100).toFixed(0) : 0}%)</p>
+              </>
+            ) : <p className="text-gray-400 text-sm">No rejections</p>;
+          })()}
+        </div>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Top publication year</p>
+          {(() => {
+            const top = Object.entries(yearMap).sort((a,b) => b[1]-a[1])[0];
+            return top ? (
+              <>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">{top[0]}</p>
+                <p className="text-xs text-gray-400 mt-1">{top[1]} papers</p>
+              </>
+            ) : <p className="text-gray-400 text-sm">No data</p>;
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 function App() {
@@ -702,8 +1093,9 @@ function App() {
   }, []);
 
   const tabs = [
-    ["papers",  "Papers"],
-    ["history", "History"],
+    ["papers",    "Papers"],
+    ["history",   "History"],
+    ["analytics", "Analytics"],
   ];
 
   return (
@@ -767,7 +1159,7 @@ function App() {
             deleted={deleted}
             status={status}
           />
-        ) : (
+        ) : tab === "history" ? (
           <div className="h-full overflow-y-auto">
             <HistoryPage
               history={history}
@@ -776,6 +1168,16 @@ function App() {
               onStar={handleStar}
               deleted={deleted}
               onDelete={handleDelete}
+            />
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto">
+            <AnalyticsPage
+              papers={papers}
+              rejects={rejects}
+              history={history}
+              starred={starred}
+              darkMode={darkMode}
             />
           </div>
         )}
