@@ -27,6 +27,16 @@ def append_ndjson(path: str, records: List[dict]) -> None:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def write_ndjson(path: str, records: List[dict]) -> None:
+    """Overwrite file with records, one JSON line per record."""
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def write_json(path: str, data: Any) -> None:
     """Write data as pretty-printed JSON to path. Create parent dirs if needed."""
     parent = os.path.dirname(path)

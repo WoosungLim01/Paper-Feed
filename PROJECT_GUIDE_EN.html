@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperFeed — Project Guide</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2e3147;
+    --accent: #5b73ff;
+    --accent2: #ff6b9d;
+    --accent3: #4ecdc4;
+    --accent4: #ffd93d;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --purple: #c084fc;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    border: 2px solid var(--accent);
+    padding: 32px;
+    margin-bottom: 40px;
+    text-align: center;
+    position: relative;
+  }
+  .header::before {
+    content: '📄 PAPER FEED';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── SECTION ── */
+  section {
+    margin-bottom: 48px;
+  }
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--accent4);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+  .section-title span {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 12px;
+    letter-spacing: 0;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .card p {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+
+  /* ── ANALOGY BOX ── */
+  .analogy {
+    border: 1px dashed var(--accent3);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,205,196,0.04);
+  }
+  .analogy-label {
+    font-size: 0.75rem;
+    color: var(--accent3);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  /* ── FLOW DIAGRAMS ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: 1px solid;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 120px;
+    text-align: center;
+  }
+  .flow-arrow {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .flow-arrow-down {
+    text-align: center;
+    padding: 4px 0;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    padding-left: 60px;
+  }
+
+  /* color variants */
+  .c-blue  { border-color: var(--accent);  color: var(--accent); }
+  .c-pink  { border-color: var(--accent2); color: var(--accent2); }
+  .c-teal  { border-color: var(--accent3); color: var(--accent3); }
+  .c-yell  { border-color: var(--accent4); color: var(--accent4); }
+  .c-green { border-color: var(--green);   color: var(--green); }
+  .c-orange{ border-color: var(--orange);  color: var(--orange); }
+  .c-purple{ border-color: var(--purple);  color: var(--purple); }
+  .c-red   { border-color: var(--red);     color: var(--red); }
+
+  /* ── PIPELINE DIAGRAM ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .pipeline-step {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    margin-bottom: 0;
+  }
+  .step-num {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 48px;
+  }
+  .step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .step-line {
+    flex: 1;
+    width: 2px;
+    background: var(--border);
+    margin: 4px auto;
+    min-height: 32px;
+  }
+  .step-content {
+    flex: 1;
+    padding-bottom: 28px;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    padding-top: 6px;
+  }
+  .step-name {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+  .step-eng {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .step-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .step-note {
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    margin-top: 8px;
+    color: var(--text-muted);
+    display: inline-block;
+  }
+
+  /* ── FILE TREE ── */
+  .tree {
+    font-size: 0.85rem;
+    line-height: 2;
+  }
+  .tree-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 2px 0;
+  }
+  .tree-indent { color: var(--border); flex-shrink: 0; }
+  .tree-icon { flex-shrink: 0; width: 20px; }
+  .tree-name { font-weight: bold; }
+  .tree-desc { color: var(--text-muted); font-size: 0.78rem; }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  @media(max-width: 700px) {
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ── DATA FLOW DIAGRAM ── */
+  .df-box {
+    border: 1px solid;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 0.82rem;
+  }
+  .df-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .df-name { font-weight: bold; }
+  .df-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    padding: 6px 0;
+  }
+  .df-container {
+    border: 1px dashed var(--border);
+    padding: 16px;
+    position: relative;
+  }
+  .df-container-label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  th {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--accent4);
+    background: var(--surface);
+  }
+  td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    color: var(--text-muted);
+  }
+  td:first-child { color: var(--text); font-weight: bold; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    border: 1px solid;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+    color: var(--accent3);
+  }
+  .code .comment { color: var(--text-muted); }
+  .code .cmd { color: var(--accent4); }
+
+  /* ── DEBUG SECTION ── */
+  .debug-item {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    background: var(--surface);
+  }
+  .debug-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .debug-cause {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .debug-fix {
+    font-size: 0.8rem;
+    color: var(--accent3);
+  }
+
+  /* ── SCROLLABLE ── */
+  .scroll-x { overflow-x: auto; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── TOC ── */
+  .toc {
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    margin-bottom: 40px;
+    background: var(--surface);
+  }
+  .toc-title {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .toc a {
+    display: block;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 3px 0;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc-num {
+    color: var(--accent);
+    margin-right: 8px;
+  }
+
+  /* tag */
+  .tag {
+    font-size: 0.72rem;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    color: var(--text-muted);
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PaperFeed</h1>
+  <p>Complete Project Structure & Workflow Guide — Beginner Friendly</p>
+  <p style="margin-top:8px; font-size:0.78rem; color:#5b73ff;">Last updated: 2026-06-14</p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <div class="toc-title">/ TABLE OF CONTENTS /</div>
+  <a href="#what"><span class="toc-num">01.</span> What is this project?</a>
+  <a href="#how-it-works"><span class="toc-num">02.</span> How does it work? (Big Picture)</a>
+  <a href="#pipeline"><span class="toc-num">03.</span> Step-by-Step Pipeline</a>
+  <a href="#structure"><span class="toc-num">04.</span> File Structure</a>
+  <a href="#data-flow"><span class="toc-num">05.</span> Data Flow</a>
+  <a href="#config"><span class="toc-num">06.</span> Configuration</a>
+  <a href="#run"><span class="toc-num">07.</span> How to Run</a>
+  <a href="#debug"><span class="toc-num">08.</span> Debugging Guide</a>
+  <a href="#components"><span class="toc-num">09.</span> Component Summary</a>
+</div>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 01 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="what">
+  <div class="section-title">01. WHAT IS THIS PROJECT? <span>Overview</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ ANALOGY /</div>
+    <p>
+      Hundreds of academic papers are published online every single day.
+      Nobody has time to read them all. PaperFeed lets you define
+      <strong style="color:#4ecdc4;">"your research interests"</strong>,
+      then automatically hunts down relevant papers, scores them, and
+      presents them on a clean <strong style="color:#5b73ff;">website</strong>.
+    </p>
+    <p style="margin-top:8px; color:#8892a4; font-size:0.85rem;">
+      Think of it as a personal research assistant that reads thousands of papers
+      every day and surfaces only the ones that match your interests — ranked by relevance.
+    </p>
+  </div>
+
+  <div class="grid-2" style="margin-top:20px;">
+    <div class="card">
+      <div class="card-title" style="color:#5b73ff;">Input</div>
+      <p>Your research topic, specific questions, and keywords of interest</p>
+      <p style="margin-top:6px; font-size:0.78rem;">e.g., "Latest papers on AI explainability"</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#4ecdc4;">Output</div>
+      <p>A ranked list of relevant papers displayed on a filterable web page</p>
+      <p style="margin-top:6px; font-size:0.78rem;">e.g., 23 relevant papers surfaced from 127 candidates</p>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-title" style="color:#fb923c;">3 Paper Sources</div>
+      <p>arXiv, Semantic Scholar, and OpenAlex — searched simultaneously</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#ffd93d;">No AI Scoring</div>
+      <p>Relevance is calculated with TF-IDF math — reproducible and fully transparent</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#c084fc;">No Server Needed</div>
+      <p>Python collects data → generates static files → browser reads them directly</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 02 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="how-it-works">
+  <div class="section-title">02. HOW DOES IT WORK? <span>Big Picture</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ ARCHITECTURE OVERVIEW /</div>
+    <p style="font-size:0.85rem;">
+      The system is split into 3 layers.
+      The <strong style="color:#5b73ff;">Python backend</strong> fetches and analyzes papers,
+      <strong style="color:#ffd93d;">data files</strong> store the results,
+      and the <strong style="color:#4ecdc4;">web frontend</strong> presents everything in the browser.
+    </p>
+  </div>
+
+  <div style="margin-top:24px;">
+
+    <!-- Layer diagram -->
+    <div class="df-container" style="margin-bottom:16px;">
+      <div class="df-container-label">LAYER 1 — Python Backend</div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div class="df-box c-blue">
+          <div class="df-label">FETCHER</div>
+          <div class="df-name">Collect Papers</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Crawls 3 APIs simultaneously</div>
+        </div>
+        <div class="df-box c-pink">
+          <div class="df-label">SCORER</div>
+          <div class="df-name">Relevance Score</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">TF-IDF algorithm</div>
+        </div>
+        <div class="df-box c-teal">
+          <div class="df-label">PUBLISHER</div>
+          <div class="df-name">Save Results</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Writes output files</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼</div>
+
+    <div class="df-container" style="margin-bottom:16px;">
+      <div class="df-container-label">LAYER 2 — Data Files</div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div class="df-box c-yell">
+          <div class="df-label">papers.ndjson</div>
+          <div class="df-name">Accepted Papers</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Papers that passed the threshold</div>
+        </div>
+        <div class="df-box c-orange">
+          <div class="df-label">rejects.ndjson</div>
+          <div class="df-name">Rejected Papers</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Below relevance threshold</div>
+        </div>
+        <div class="df-box c-purple">
+          <div class="df-label">run_history.ndjson</div>
+          <div class="df-name">Run Log</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">When / how many found</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼</div>
+
+    <div class="df-container">
+      <div class="df-container-label">LAYER 3 — Web Frontend</div>
+      <div class="grid-2" style="margin-top:8px;">
+        <div class="df-box c-teal">
+          <div class="df-label">site/app.js (React)</div>
+          <div class="df-name">Paper Viewer</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Search, filter, star papers</div>
+        </div>
+        <div class="df-box c-green">
+          <div class="df-label">site/data/*.json</div>
+          <div class="df-name">Mirrored Data</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">JSON files the browser reads</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 03 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="pipeline">
+  <div class="section-title">03. STEP-BY-STEP PIPELINE <span>How papers are processed</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ ANALOGY /</div>
+    <p style="font-size:0.85rem;">
+      The pipeline works like a factory conveyor belt.
+      Each paper passes through one stage at a time — getting processed,
+      scored, filtered, and finally published to the website.
+    </p>
+  </div>
+
+  <div class="pipeline" style="margin-top:24px;">
+
+    <!-- STEP 1 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-blue">01</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#5b73ff;">Load Config</span>
+          <span class="step-eng">Configuration Loading</span>
+          <span class="tag">config.py</span>
+        </div>
+        <div class="step-desc">
+          Reads <code>data/survey_config.json</code>.<br>
+          This file holds your research topic, search keywords, and the
+          minimum score threshold for a paper to be accepted.
+        </div>
+        <div class="step-note">
+          INPUT: survey_config.json + .env (environment variables)<br>
+          OUTPUT: SurveyConfig object (a bundle of all settings)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-orange">02</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#fb923c;">Fetch Papers</span>
+          <span class="step-eng">Multi-source Crawling</span>
+          <span class="tag">fetcher.py</span>
+        </div>
+        <div class="step-desc">
+          Sends requests to all 3 paper databases simultaneously and collects results.<br><br>
+          <span style="color:#5b73ff;">arXiv</span> — Free preprint repository, cutting-edge papers<br>
+          <span style="color:#4ecdc4;">Semantic Scholar</span> — AI/ML-focused academic database<br>
+          <span style="color:#c084fc;">OpenAlex</span> — The broadest open academic database<br><br>
+          Up to 50 papers per source, yielding ~150 "candidate" papers total.
+        </div>
+        <div class="step-note">
+          INPUT: Search queries (keyword list)<br>
+          OUTPUT: ~150 raw paper candidates
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-purple">03</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#c084fc;">Deduplicate</span>
+          <span class="step-eng">Remove Duplicates</span>
+          <span class="tag">deduplicator.py</span>
+        </div>
+        <div class="step-desc">
+          The same paper can appear in all 3 sources.
+          This step merges duplicates and keeps the most complete record.<br><br>
+          <strong>Identity Priority:</strong> DOI ▶ arXiv ID ▶ OpenAlex ID ▶ S2 ID ▶ Title fingerprint<br>
+          (DOI is the most trustworthy unique identifier)
+        </div>
+        <div class="step-note">
+          INPUT: ~150 papers (with duplicates)<br>
+          OUTPUT: ~80–100 unique papers
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-pink">04</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#ff6b9d;">Score Papers</span>
+          <span class="step-eng">TF-IDF Relevance Scoring</span>
+          <span class="tag">scorer.py</span>
+        </div>
+        <div class="step-desc">
+          Mathematically measures how similar each paper's title + abstract
+          is to your research topic.<br><br>
+          <strong style="color:#ffd93d;">TF-IDF + Cosine Similarity:</strong>
+          Converts text into vectors based on word frequency, then measures
+          the angle between them. Outputs a score from 0.0 to 1.0.<br>
+          No LLM (like ChatGPT) involved — same inputs always produce the same score.
+        </div>
+        <div class="step-note">
+          INPUT: Deduplicated papers<br>
+          OUTPUT: Each paper gets a <code>score</code> field (e.g., 0.73)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-yell">05</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#ffd93d;">Filter</span>
+          <span class="step-eng">Accept / Reject</span>
+          <span class="tag">run.py</span>
+        </div>
+        <div class="step-desc">
+          Papers that meet the minimum score threshold are
+          <strong style="color:#4ade80;">ACCEPTED</strong>.<br>
+          Papers that don't are <strong style="color:#f87171;">REJECTED</strong> — with a reason logged.<br><br>
+          Rejection reasons: score too low / outside year range / missing title or URL
+        </div>
+        <div class="step-note">
+          INPUT: Scored papers<br>
+          OUTPUT: accepted list + rejected list (with reject_reason field)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-green">06</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#4ade80;">Save & Publish</span>
+          <span class="step-eng">Persist Results</span>
+          <span class="tag">publisher.py</span>
+        </div>
+        <div class="step-desc">
+          Saves results to disk and updates the website data.<br><br>
+          — Appends new papers to <code>data/papers.ndjson</code><br>
+          — Appends rejected papers to <code>data/rejects.ndjson</code><br>
+          — Records run metadata in <code>data/run_history.ndjson</code><br>
+          — Mirrors everything as JSON into <code>site/data/</code>
+        </div>
+        <div class="step-note">
+          INPUT: accepted + rejected paper lists<br>
+          OUTPUT: Updated files → website auto-refreshes
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 (No line) -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-teal">07</div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#4ecdc4;">Done</span>
+          <span class="step-eng">Status → idle</span>
+        </div>
+        <div class="step-desc">
+          Status flips to "idle". The web frontend automatically reloads
+          the new data within 3 seconds.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pipeline -->
+
+  <!-- Status flow -->
+  <div style="margin-top:24px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:8px; letter-spacing:1px;">/ STATUS PROGRESSION (visible on the website's Status Card) /</div>
+    <div class="flow-row">
+      <div class="flow-box c-orange">crawling</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-purple">deduplicating</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-pink">scoring</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-yell">filtering</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-teal">publishing</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-green">idle</div>
+    </div>
+    <p style="font-size:0.78rem; color:#8892a4; margin-top:8px;">
+      You can watch this progress in real time on the Status Card in the top-right of the website.
+    </p>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 04 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="structure">
+  <div class="section-title">04. FILE STRUCTURE <span>What lives where</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ ANALOGY /</div>
+    <p style="font-size:0.85rem;">
+      Think of the project folder as an office:
+      <code>app/</code> is the staff (Python code, each with a specific role),
+      <code>data/</code> is the filing cabinet (stored data),
+      and <code>site/</code> is the display window (the website).
+    </p>
+  </div>
+
+  <div style="margin-top:20px;" class="code scroll-x">
+<pre>
+paper-discovery/
+│
+├── <span style="color:#ffd93d;">app/</span>                    ← Python backend (the core engine)
+│   ├── <span style="color:#5b73ff;">run.py</span>              ← Pipeline orchestrator (main entry point)
+│   ├── <span style="color:#4ecdc4;">config.py</span>           ← Configuration loader
+│   ├── <span style="color:#fb923c;">fetcher.py</span>          ← Paper crawler (3 APIs)
+│   ├── <span style="color:#c084fc;">deduplicator.py</span>     ← Duplicate merger
+│   ├── <span style="color:#ff6b9d;">scorer.py</span>           ← TF-IDF relevance scorer
+│   ├── <span style="color:#8892a4;">store.py</span>            ← File read/write helpers
+│   └── <span style="color:#4ade80;">publisher.py</span>        ← Save results & update website
+│
+├── <span style="color:#ffd93d;">data/</span>                   ← Data storage (append-only)
+│   ├── survey_config.json   ← ⭐ Main config (topic, questions, threshold)
+│   ├── papers.ndjson        ← Accepted papers (one JSON object per line)
+│   ├── rejects.ndjson       ← Rejected papers (with reason)
+│   ├── run_history.ndjson   ← Per-run metadata log
+│   ├── changelog.md         ← Human-readable run changelog
+│   └── system_status.json   ← Current pipeline status
+│
+├── <span style="color:#ffd93d;">site/</span>                   ← Web frontend (React)
+│   ├── index.html           ← HTML shell (React mount point)
+│   ├── app.js               ← React app (696 lines — all UI logic)
+│   ├── styles.css           ← Styles & animations
+│   └── data/               ← Mirrored JSON (generated by Python)
+│       ├── papers.json
+│       ├── rejects.json
+│       ├── run_history.json
+│       └── system_status.json
+│
+├── requirements.txt         ← Python package list
+├── .env                     ← Secret API keys (never committed to git)
+└── .env.example             ← Template for .env
+</pre>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 05 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="data-flow">
+  <div class="section-title">05. DATA FLOW <span>From API to browser</span></div>
+
+  <div style="margin-top:8px;">
+
+    <!-- Source boxes -->
+    <div class="grid-3">
+      <div class="df-box c-blue">
+        <div class="df-label">SOURCE 1</div>
+        <div class="df-name">arXiv API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">XML Feed → feedparser</div>
+      </div>
+      <div class="df-box c-teal">
+        <div class="df-label">SOURCE 2</div>
+        <div class="df-name">Semantic Scholar API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">REST API → JSON</div>
+      </div>
+      <div class="df-box c-purple">
+        <div class="df-label">SOURCE 3</div>
+        <div class="df-name">OpenAlex API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">REST API → JSON</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ fetcher.py sends requests to all 3 at once</div>
+
+    <div class="df-box c-orange" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">RAW CANDIDATES</div>
+      <div class="df-name">~150 raw paper candidates</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">List of dicts with 18 fields each</div>
+    </div>
+
+    <div class="df-arrow">▼ deduplicator.py merges duplicates</div>
+
+    <div class="df-box c-purple" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">UNIQUE PAPERS</div>
+      <div class="df-name">~80–100 unique papers</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">Each gets a paper_id; source_hits merged</div>
+    </div>
+
+    <div class="df-arrow">▼ scorer.py computes relevance</div>
+
+    <div class="df-box c-pink" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">SCORED PAPERS</div>
+      <div class="df-name">Papers with relevance scores</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">score field added: 0.0 → 1.0</div>
+    </div>
+
+    <div class="df-arrow">▼ run.py splits by threshold</div>
+
+    <div class="grid-2" style="max-width:500px; margin:0 auto;">
+      <div class="df-box c-green">
+        <div class="df-label">ACCEPTED</div>
+        <div class="df-name">Relevant Papers</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">score ≥ min_relevance_score</div>
+      </div>
+      <div class="df-box c-red">
+        <div class="df-label">REJECTED</div>
+        <div class="df-name">Filtered Out</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">+ reject_reason field added</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ publisher.py persists everything</div>
+
+    <div class="grid-3">
+      <div class="df-box c-yell">
+        <div class="df-label">data/papers.ndjson</div>
+        <div class="df-name">Paper DB</div>
+      </div>
+      <div class="df-box c-orange">
+        <div class="df-label">data/rejects.ndjson</div>
+        <div class="df-name">Reject DB</div>
+      </div>
+      <div class="df-box c-purple">
+        <div class="df-label">data/run_history.ndjson</div>
+        <div class="df-name">Run History</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ mirrored as JSON into site/data/</div>
+
+    <div class="df-box c-teal" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">REACT FRONTEND</div>
+      <div class="df-name">Open site/index.html in browser</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">
+        Loads JSON → renders UI → filter / search / star
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Paper fields diagram -->
+  <div style="margin-top:32px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ PAPER OBJECT FIELDS /</div>
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#5b73ff; font-size:0.82rem;">Identifiers (IDs)</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            paper_id — internal unique ID<br>
+            arxiv_id — arXiv paper number<br>
+            doi — international standard paper ID<br>
+            openalex_id — OpenAlex ID<br>
+            semantic_scholar_id — S2 ID
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#4ecdc4; font-size:0.82rem;">Content</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            title — paper title<br>
+            abstract — paper abstract<br>
+            authors — list of authors<br>
+            year — publication year<br>
+            published_date — full date
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#fb923c; font-size:0.82rem;">Metadata</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            source — where it was first found<br>
+            source_hits — all sources it appeared in<br>
+            score — relevance score (0–1)<br>
+            run_id — which pipeline run added it
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#c084fc; font-size:0.82rem;">Links</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            url — paper page URL<br>
+            pdf_url — direct PDF download link
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 06 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="config">
+  <div class="section-title">06. CONFIGURATION <span>Tuning the pipeline</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ KEY CONFIG FILE: data/survey_config.json /</div>
+    <p style="font-size:0.85rem;">
+      This is the only file you need to edit to control what gets searched
+      and how strictly papers are filtered.
+    </p>
+  </div>
+
+  <div class="code" style="margin-top:16px;">
+<pre>
+{
+  <span style="color:#4ecdc4;">"topic_overview"</span>: <span style="color:#ffd93d;">"artificial intelligence"</span>,
+  <span class="comment">// ↑ Main research topic. One sentence describing the field.</span>
+
+  <span style="color:#4ecdc4;">"research_questions"</span>: [
+    <span style="color:#ffd93d;">"What methods are used to make AI systems explainable?"</span>,
+    <span style="color:#ffd93d;">"How can AI be applied to healthcare diagnosis?"</span>
+  ],
+  <span class="comment">// ↑ Specific questions you want answered. More questions = more precise search.</span>
+
+  <span style="color:#4ecdc4;">"query_hints"</span>: [<span style="color:#ffd93d;">"XAI"</span>, <span style="color:#ffd93d;">"explainability"</span>, <span style="color:#ffd93d;">"interpretability"</span>],
+  <span class="comment">// ↑ Extra keywords. Acronyms and synonyms work great here.</span>
+
+  <span style="color:#4ecdc4;">"timeline_from_year"</span>: <span style="color:#fb923c;">2020</span>,
+  <span style="color:#4ecdc4;">"timeline_to_year"</span>: <span style="color:#fb923c;">2026</span>,
+  <span class="comment">// ↑ Papers outside this year range are automatically rejected.</span>
+
+  <span style="color:#4ecdc4;">"min_relevance_score"</span>: <span style="color:#fb923c;">0.05</span>
+  <span class="comment">// ↑ Minimum relevance score. 0.05 = 5%. Higher = stricter. Range: 0.0–1.0</span>
+}
+</pre>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ ENVIRONMENT VARIABLES (.env file) /</div>
+    <div class="code">
+<pre>
+<span style="color:#4ecdc4;">S2_API_KEY</span>=<span style="color:#ffd93d;">your_api_key_here</span>
+<span class="comment"># Semantic Scholar API key (optional but recommended for more results)</span>
+<span class="comment"># Get a free key at: semanticscholar.org/product/api</span>
+
+<span style="color:#4ecdc4;">DAYS_BACK</span>=<span style="color:#fb923c;">7</span>
+<span class="comment"># How many days back to search for papers (default: 7)</span>
+
+<span style="color:#4ecdc4;">MAX_PER_SOURCE</span>=<span style="color:#fb923c;">50</span>
+<span class="comment"># Max papers to fetch per source (default: 50)</span>
+</pre>
+    </div>
+  </div>
+
+  <!-- Score threshold guide -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ min_relevance_score GUIDE /</div>
+    <div class="scroll-x">
+      <table>
+        <tr>
+          <th>Value</th><th>Strictness</th><th>When to use</th>
+        </tr>
+        <tr>
+          <td>0.03 – 0.05</td>
+          <td>Very low (permissive)</td>
+          <td>Too few results showing up; early exploration of a topic</td>
+        </tr>
+        <tr>
+          <td>0.10 – 0.20</td>
+          <td>Moderate</td>
+          <td>General use — a good starting point (recommended)</td>
+        </tr>
+        <tr>
+          <td>0.30 – 0.50</td>
+          <td>High (strict)</td>
+          <td>Very specific topic; prioritize precision over recall</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 07 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="run">
+  <div class="section-title">07. HOW TO RUN <span>Getting started</span></div>
+
+  <div class="grid-2">
+    <div>
+      <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 1. One-time setup /</div>
+      <div class="code">
+<pre>
+<span class="comment"># Install dependencies</span>
+<span class="cmd">pip install -r requirements.txt</span>
+
+<span class="comment"># Create your .env file</span>
+<span class="cmd">cp .env.example .env</span>
+<span class="comment"># Open .env and add your API key</span>
+</pre>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 2. Run the pipeline /</div>
+      <div class="code">
+<pre>
+<span class="comment"># Default run</span>
+<span class="cmd">python -m app.run</span>
+
+<span class="comment"># Override topic temporarily</span>
+<span class="cmd">python -m app.run --topic "robotics"</span>
+
+<span class="comment"># Fetch last 14 days of papers</span>
+<span class="cmd">python -m app.run --days-back 14</span>
+
+<span class="comment"># Dry run — simulate without saving</span>
+<span class="cmd">python -m app.run --dry-run</span>
+</pre>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 3. View the website /</div>
+    <div class="code">
+<pre>
+<span class="comment"># Start a simple web server (from the site/ folder)</span>
+<span class="cmd">cd site && python -m http.server 8080</span>
+
+<span class="comment"># Open in your browser</span>
+<span class="comment"># → http://localhost:8080</span>
+</pre>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ EXAMPLE OUTPUT AFTER A RUN /</div>
+    <div class="code">
+<pre>
+<span style="color:#5b73ff;">──────────────────────────────</span>
+<span style="color:#ffd93d;">  PaperFeed Run Summary</span>
+<span style="color:#5b73ff;">──────────────────────────────</span>
+  Topic        artificial intelligence
+  Sources      arXiv · S2 · OpenAlex
+  Raw found    143
+  After dedup  89
+  Accepted     21     <span style="color:#4ade80;">← relevant papers</span>
+  Rejected     68     <span style="color:#f87171;">← filtered out</span>
+  Site updated ✓
+<span style="color:#5b73ff;">──────────────────────────────</span>
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 08 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="debug">
+  <div class="section-title">08. DEBUGGING GUIDE <span>When things go wrong</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ COMMON ISSUES & FIXES /</div>
+    <p style="font-size:0.85rem;">Work through this checklist in order when something isn't working.</p>
+  </div>
+
+  <div style="margin-top:20px;">
+
+    <div class="debug-item" style="border-color:#f87171;">
+      <div class="debug-title" style="color:#f87171;">Issue 1: Zero papers accepted (0 papers accepted)</div>
+      <div class="debug-cause">Cause: min_relevance_score is set too high, or search queries are too narrow</div>
+      <div class="debug-fix">
+        Fix:<br>
+        1. Lower min_relevance_score to 0.05 in data/survey_config.json<br>
+        2. Run with --dry-run and check scorer.py output (min/max/mean scores printed)<br>
+        3. Add broader keywords to query_hints
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#fb923c;">
+      <div class="debug-title" style="color:#fb923c;">Issue 2: Semantic Scholar error (429 Too Many Requests)</div>
+      <div class="debug-cause">Cause: Rate limit exceeded — running without an API key</div>
+      <div class="debug-fix">
+        Fix:<br>
+        1. Get a free API key at semanticscholar.org/product/api<br>
+        2. Add S2_API_KEY=your_key_here to your .env file<br>
+        3. The pipeline still works without a key, but returns fewer results
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#ffd93d;">
+      <div class="debug-title" style="color:#ffd93d;">Issue 3: Website not updating (papers not appearing)</div>
+      <div class="debug-cause">Cause: site/data/ JSON files weren't regenerated, or browser cache</div>
+      <div class="debug-fix">
+        Fix:<br>
+        1. Confirm python -m app.run completed successfully<br>
+        2. Check the last_run time in data/system_status.json<br>
+        3. Hard-refresh the browser (Ctrl+Shift+R / Cmd+Shift+R)<br>
+        4. Verify that papers.json exists in site/data/
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#c084fc;">
+      <div class="debug-title" style="color:#c084fc;">Issue 4: ModuleNotFoundError</div>
+      <div class="debug-cause">Cause: Python dependencies not installed</div>
+      <div class="debug-fix">
+        Fix: Run pip install -r requirements.txt<br>
+        Required packages: httpx, feedparser, scikit-learn, python-dateutil
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#4ecdc4;">
+      <div class="debug-title" style="color:#4ecdc4;">Issue 5: Duplicate papers appearing on the website</div>
+      <div class="debug-cause">Cause: Paper has no DOI or arXiv ID — title fingerprint dedup failed</div>
+      <div class="debug-fix">
+        Fix:<br>
+        1. Manually inspect paper_id values in data/papers.ndjson<br>
+        2. Check publisher.py's existing_ids set for cross-run duplicates<br>
+        3. This is rare for arXiv papers (they always have a clear arXiv ID)
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#5b73ff;">
+      <div class="debug-title" style="color:#5b73ff;">Issue 6: CORS error in browser (when opening the file directly)</div>
+      <div class="debug-cause">Cause: Opening index.html via file:// protocol blocks JSON loading</div>
+      <div class="debug-fix">
+        Fix: Always access the site through a local web server:<br>
+        cd site && python -m http.server 8080<br>
+        → Open http://localhost:8080 in your browser
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Debug checklist -->
+  <div style="margin-top:24px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ DEBUGGING CHECKLIST (run in order) /</div>
+    <div class="code">
+<pre>
+<span class="comment">□ 1. Check .env file exists</span>
+   ls -la .env
+
+<span class="comment">□ 2. Validate survey_config.json syntax</span>
+   python -c "import json; json.load(open('data/survey_config.json'))"
+
+<span class="comment">□ 3. Check last pipeline run status</span>
+   cat data/system_status.json
+
+<span class="comment">□ 4. Count accepted papers</span>
+   wc -l data/papers.ndjson
+
+<span class="comment">□ 5. Check most recent run record</span>
+   tail -1 data/run_history.ndjson
+
+<span class="comment">□ 6. Test run (no files written)</span>
+   python -m app.run --dry-run
+
+<span class="comment">□ 7. Confirm site/data/ files exist</span>
+   ls -la site/data/
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 09 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="components">
+  <div class="section-title">09. COMPONENT SUMMARY <span>What each file does</span></div>
+
+  <div class="scroll-x">
+    <table>
+      <tr>
+        <th>File</th>
+        <th>Language</th>
+        <th>Role</th>
+        <th>Key Responsibilities</th>
+      </tr>
+      <tr>
+        <td>app/run.py</td>
+        <td>Python</td>
+        <td>Pipeline Orchestrator</td>
+        <td>Runs the full pipeline, updates status, CLI entry point</td>
+      </tr>
+      <tr>
+        <td>app/config.py</td>
+        <td>Python</td>
+        <td>Config Loader</td>
+        <td>Reads survey_config.json + .env, returns SurveyConfig object</td>
+      </tr>
+      <tr>
+        <td>app/fetcher.py</td>
+        <td>Python</td>
+        <td>Paper Crawler</td>
+        <td>Async calls to arXiv/S2/OpenAlex APIs, normalizes results</td>
+      </tr>
+      <tr>
+        <td>app/deduplicator.py</td>
+        <td>Python</td>
+        <td>Duplicate Merger</td>
+        <td>Merges duplicates by priority: DOI → arXiv ID → title fingerprint</td>
+      </tr>
+      <tr>
+        <td>app/scorer.py</td>
+        <td>Python</td>
+        <td>Relevance Scorer</td>
+        <td>TF-IDF cosine similarity scoring (0.0–1.0)</td>
+      </tr>
+      <tr>
+        <td>app/store.py</td>
+        <td>Python</td>
+        <td>File I/O Helper</td>
+        <td>NDJSON read/write, JSON serialization</td>
+      </tr>
+      <tr>
+        <td>app/publisher.py</td>
+        <td>Python</td>
+        <td>Result Publisher</td>
+        <td>Saves to data/ + mirrors to site/data/ + updates status</td>
+      </tr>
+      <tr>
+        <td>site/app.js</td>
+        <td>React (JSX)</td>
+        <td>Web Viewer</td>
+        <td>Paper browser UI, filter/search/star, polls status every 3s</td>
+      </tr>
+      <tr>
+        <td>site/styles.css</td>
+        <td>CSS</td>
+        <td>Styling</td>
+        <td>Animations, dark mode, source badge colors</td>
+      </tr>
+      <tr>
+        <td>data/survey_config.json</td>
+        <td>JSON</td>
+        <td>⭐ Master Config</td>
+        <td>Topic, questions, keywords, threshold — edit this to change behavior</td>
+      </tr>
+    </table>
+  </div>
+
+  <hr>
+
+  <!-- Frontend components -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ REACT COMPONENTS (site/app.js) /</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color:#5b73ff;">App <span class="badge c-blue">Root</span></div>
+        <p>Top-level component. Manages tab switching (Papers/History), dark mode toggle, and global data loading.</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#4ecdc4;">StatusCard</div>
+        <p>Pipeline status indicator in the top-right (idle / crawling / etc.). Refreshes every 3 seconds.</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#fb923c;">PapersPage</div>
+        <p>Main paper list view. Includes sidebar filters (source, year, score threshold), search box, and sort controls.</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#ffd93d;">PaperCard</div>
+        <p>Displays a single paper: title link, authors, relevance bar, source badges, and star button.</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#c084fc;">MonthGroup</div>
+        <p>Groups papers by publication month into collapsible sections.</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#f87171;">HistoryPage</div>
+        <p>Run history tab. Shows per-run stats: how many found, per-source counts, papers discovered.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- localStorage -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ BROWSER LOCAL STORAGE (persisted across page reloads) /</div>
+    <div class="code">
+<pre>
+<span style="color:#4ecdc4;">paperfeed_starred</span>  ← Set of starred paper IDs (saved when you click ★)
+<span style="color:#4ecdc4;">paperfeed_deleted</span>  ← Set of hidden paper IDs (survive page reloads)
+<span style="color:#4ecdc4;">paperfeed_dark</span>     ← Dark mode preference (true/false)
+
+<span class="comment">→ User preferences persist in the browser with no server or database required.</span>
+</pre>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<div style="text-align:center; padding:20px; color:#8892a4; font-size:0.78rem;">
+  PaperFeed Project Guide (English) — 2026-06-14<br>
+  Generated for /Users/usung_01/Desktop/Claude/paper-discovery
+</div>
+
+</body>
+</html>

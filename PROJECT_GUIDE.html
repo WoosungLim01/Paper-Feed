@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PaperFeed — 프로젝트 가이드</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2e3147;
+    --accent: #5b73ff;
+    --accent2: #ff6b9d;
+    --accent3: #4ecdc4;
+    --accent4: #ffd93d;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --purple: #c084fc;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    border: 2px solid var(--accent);
+    padding: 32px;
+    margin-bottom: 40px;
+    text-align: center;
+    position: relative;
+  }
+  .header::before {
+    content: '📄 PAPER FEED';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── SECTION ── */
+  section {
+    margin-bottom: 48px;
+  }
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--accent4);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+  .section-title span {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 12px;
+    letter-spacing: 0;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .card p {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+
+  /* ── ANALOGY BOX ── */
+  .analogy {
+    border: 1px dashed var(--accent3);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,205,196,0.04);
+  }
+  .analogy-label {
+    font-size: 0.75rem;
+    color: var(--accent3);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  /* ── FLOW DIAGRAMS ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    border: 1px solid;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 120px;
+    text-align: center;
+  }
+  .flow-arrow {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .flow-arrow-down {
+    text-align: center;
+    padding: 4px 0;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    padding-left: 60px;
+  }
+
+  /* color variants */
+  .c-blue  { border-color: var(--accent);  color: var(--accent); }
+  .c-pink  { border-color: var(--accent2); color: var(--accent2); }
+  .c-teal  { border-color: var(--accent3); color: var(--accent3); }
+  .c-yell  { border-color: var(--accent4); color: var(--accent4); }
+  .c-green { border-color: var(--green);   color: var(--green); }
+  .c-orange{ border-color: var(--orange);  color: var(--orange); }
+  .c-purple{ border-color: var(--purple);  color: var(--purple); }
+  .c-red   { border-color: var(--red);     color: var(--red); }
+
+  /* ── PIPELINE DIAGRAM ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .pipeline-step {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    margin-bottom: 0;
+  }
+  .step-num {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 48px;
+  }
+  .step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .step-line {
+    flex: 1;
+    width: 2px;
+    background: var(--border);
+    margin: 4px auto;
+    min-height: 32px;
+  }
+  .step-content {
+    flex: 1;
+    padding-bottom: 28px;
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    padding-top: 6px;
+  }
+  .step-name {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+  .step-eng {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .step-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .step-note {
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    margin-top: 8px;
+    color: var(--text-muted);
+    display: inline-block;
+  }
+
+  /* ── FILE TREE ── */
+  .tree {
+    font-size: 0.85rem;
+    line-height: 2;
+  }
+  .tree-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 2px 0;
+  }
+  .tree-indent { color: var(--border); flex-shrink: 0; }
+  .tree-icon { flex-shrink: 0; width: 20px; }
+  .tree-name { font-weight: bold; }
+  .tree-desc { color: var(--text-muted); font-size: 0.78rem; }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  @media(max-width: 700px) {
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ── DATA FLOW DIAGRAM ── */
+  .df-box {
+    border: 1px solid;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 0.82rem;
+  }
+  .df-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .df-name { font-weight: bold; }
+  .df-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    padding: 6px 0;
+  }
+  .df-container {
+    border: 1px dashed var(--border);
+    padding: 16px;
+    position: relative;
+  }
+  .df-container-label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  th {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--accent4);
+    background: var(--surface);
+  }
+  td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    color: var(--text-muted);
+  }
+  td:first-child { color: var(--text); font-weight: bold; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    border: 1px solid;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+    color: var(--accent3);
+  }
+  .code .comment { color: var(--text-muted); }
+  .code .cmd { color: var(--accent4); }
+
+  /* ── DEBUG SECTION ── */
+  .debug-item {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    background: var(--surface);
+  }
+  .debug-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .debug-cause {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .debug-fix {
+    font-size: 0.8rem;
+    color: var(--accent3);
+  }
+
+  /* ── SCROLLABLE ── */
+  .scroll-x { overflow-x: auto; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── TOC ── */
+  .toc {
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    margin-bottom: 40px;
+    background: var(--surface);
+  }
+  .toc-title {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .toc a {
+    display: block;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 3px 0;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc-num {
+    color: var(--accent);
+    margin-right: 8px;
+  }
+
+  /* tag */
+  .tag {
+    font-size: 0.72rem;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    color: var(--text-muted);
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PaperFeed</h1>
+  <p>프로젝트 구조 & 워크플로우 완전 가이드 — 노베이스도 이해 가능</p>
+  <p style="margin-top:8px; font-size:0.78rem; color:#5b73ff;">Last updated: 2026-06-14</p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <div class="toc-title">/ TABLE OF CONTENTS /</div>
+  <a href="#what"><span class="toc-num">01.</span> 이 프로젝트가 뭐하는 건가요? (What is this?)</a>
+  <a href="#how-it-works"><span class="toc-num">02.</span> 어떻게 작동하나요? (Big Picture)</a>
+  <a href="#pipeline"><span class="toc-num">03.</span> 파이프라인 단계별 설명 (Step-by-Step Pipeline)</a>
+  <a href="#structure"><span class="toc-num">04.</span> 파일 구조 (File Structure)</a>
+  <a href="#data-flow"><span class="toc-num">05.</span> 데이터 흐름 (Data Flow)</a>
+  <a href="#config"><span class="toc-num">06.</span> 설정 방법 (Configuration)</a>
+  <a href="#run"><span class="toc-num">07.</span> 실행 방법 (How to Run)</a>
+  <a href="#debug"><span class="toc-num">08.</span> 디버깅 가이드 (Debugging)</a>
+  <a href="#components"><span class="toc-num">09.</span> 각 파일 역할 요약 (Component Summary)</a>
+</div>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 01 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="what">
+  <div class="section-title">01. 이 프로젝트가 뭐하는 건가요? <span>What is this?</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 쉬운 비유 (Analogy) /</div>
+    <p>
+      인터넷에는 매일 수백 편의 학술 논문이 쏟아집니다.<br>
+      그걸 일일이 읽을 수는 없죠. PaperFeed는 <strong style="color:#4ecdc4;">"내가 관심있는 주제"</strong>를 알려주면,
+      자동으로 논문을 찾아다가 점수를 매겨서 <strong style="color:#5b73ff;">웹사이트</strong>에 정리해주는 시스템입니다.
+    </p>
+    <p style="margin-top:8px; color:#8892a4; font-size:0.85rem;">
+      Like a personal research assistant who reads thousands of papers every day and
+      presents only the ones relevant to your interests.
+    </p>
+  </div>
+
+  <div class="grid-2" style="margin-top:20px;">
+    <div class="card">
+      <div class="card-title" style="color:#5b73ff;">Input (입력)</div>
+      <p>관심 있는 연구 주제, 궁금한 질문들, 키워드</p>
+      <p style="margin-top:6px; font-size:0.78rem;">e.g., "AI의 설명 가능성에 관한 최신 논문"</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#4ecdc4;">Output (출력)</div>
+      <p>관련도 점수 순으로 정렬된 논문 목록이 담긴 웹페이지</p>
+      <p style="margin-top:6px; font-size:0.78rem;">e.g., 127개 논문 중 관련 논문 23개 표시</p>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-title" style="color:#fb923c;">논문 소스 3개</div>
+      <p>arXiv, Semantic Scholar, OpenAlex — 3곳에서 동시에 검색</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#ffd93d;">AI 없이 점수 계산</div>
+      <p>TF-IDF 수학 알고리즘으로 관련도 계산. 재현 가능하고 투명함</p>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#c084fc;">서버 불필요</div>
+      <p>Python으로 데이터 수집 → 정적 웹사이트 생성 → 브라우저에서 보기</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 02 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="how-it-works">
+  <div class="section-title">02. 어떻게 작동하나요? <span>Big Picture</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 전체 구조 (Architecture Overview) /</div>
+    <p style="font-size:0.85rem;">
+      이 시스템은 크게 3개의 레이어(층)로 나뉩니다.
+      <strong style="color:#5b73ff;">Python 백엔드</strong>가 논문을 수집/분석하고,
+      <strong style="color:#ffd93d;">데이터 파일</strong>로 저장하고,
+      <strong style="color:#4ecdc4;">웹 프론트엔드</strong>가 그걸 예쁘게 보여줍니다.
+    </p>
+  </div>
+
+  <div style="margin-top:24px;">
+
+    <!-- Layer diagram -->
+    <div class="df-container" style="margin-bottom:16px;">
+      <div class="df-container-label">LAYER 1 — Python Backend (백엔드)</div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div class="df-box c-blue">
+          <div class="df-label">FETCHER</div>
+          <div class="df-name">논문 수집</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">3개 API에서 크롤링</div>
+        </div>
+        <div class="df-box c-pink">
+          <div class="df-label">SCORER</div>
+          <div class="df-name">관련도 점수</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">TF-IDF 알고리즘</div>
+        </div>
+        <div class="df-box c-teal">
+          <div class="df-label">PUBLISHER</div>
+          <div class="df-name">결과 저장</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">파일로 출력</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼</div>
+
+    <div class="df-container" style="margin-bottom:16px;">
+      <div class="df-container-label">LAYER 2 — Data Files (데이터)</div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div class="df-box c-yell">
+          <div class="df-label">papers.ndjson</div>
+          <div class="df-name">채택된 논문</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">관련도 통과한 논문</div>
+        </div>
+        <div class="df-box c-orange">
+          <div class="df-label">rejects.ndjson</div>
+          <div class="df-name">탈락된 논문</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">관련도 미달 논문</div>
+        </div>
+        <div class="df-box c-purple">
+          <div class="df-label">run_history.ndjson</div>
+          <div class="df-name">실행 기록</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">언제 얼마나 찾았나</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼</div>
+
+    <div class="df-container">
+      <div class="df-container-label">LAYER 3 — Web Frontend (프론트엔드)</div>
+      <div class="grid-2" style="margin-top:8px;">
+        <div class="df-box c-teal">
+          <div class="df-label">site/app.js (React)</div>
+          <div class="df-name">논문 뷰어</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">검색, 필터, 즐겨찾기</div>
+        </div>
+        <div class="df-box c-green">
+          <div class="df-label">site/data/*.json</div>
+          <div class="df-name">미러된 데이터</div>
+          <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">브라우저가 읽는 JSON</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 03 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="pipeline">
+  <div class="section-title">03. 파이프라인 단계별 설명 <span>Step-by-Step Pipeline</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 비유 /</div>
+    <p style="font-size:0.85rem;">
+      파이프라인(Pipeline)은 컨베이어 벨트와 같습니다.
+      논문이 한 단계씩 통과하면서 가공되고, 최종적으로 웹사이트에 게시됩니다.
+    </p>
+  </div>
+
+  <div class="pipeline" style="margin-top:24px;">
+
+    <!-- STEP 1 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-blue">01</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#5b73ff;">설정 불러오기</span>
+          <span class="step-eng">Load Config</span>
+          <span class="tag">config.py</span>
+        </div>
+        <div class="step-desc">
+          <code>data/survey_config.json</code> 파일을 읽습니다.<br>
+          여기에 "내가 관심있는 주제", "찾고 싶은 키워드", "몇 점 이상만 보여줄까"
+          같은 설정이 들어있습니다.
+        </div>
+        <div class="step-note">
+          INPUT: survey_config.json + .env (환경변수)<br>
+          OUTPUT: SurveyConfig 객체 (설정값 묶음)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-orange">02</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#fb923c;">논문 수집 (Fetch)</span>
+          <span class="step-eng">Fetching Papers</span>
+          <span class="tag">fetcher.py</span>
+        </div>
+        <div class="step-desc">
+          3개의 논문 데이터베이스 API에 동시에 요청을 보내 논문을 긁어옵니다.<br><br>
+          <span style="color:#5b73ff;">arXiv</span> — 프리프린트 논문 저장소 (무료, 최신)<br>
+          <span style="color:#4ecdc4;">Semantic Scholar</span> — AI/ML 논문 특화 DB<br>
+          <span style="color:#c084fc;">OpenAlex</span> — 가장 넓은 범위의 학술 논문 DB<br><br>
+          소스당 최대 50개, 총 최대 150개의 "후보" 논문을 가져옵니다.
+        </div>
+        <div class="step-note">
+          INPUT: 검색 쿼리 (키워드 목록)<br>
+          OUTPUT: ~150개의 논문 후보 (원본 데이터)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-purple">03</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#c084fc;">중복 제거 (Deduplicate)</span>
+          <span class="step-eng">Deduplication</span>
+          <span class="tag">deduplicator.py</span>
+        </div>
+        <div class="step-desc">
+          같은 논문이 3개 소스에서 각각 발견될 수 있습니다.<br>
+          이 단계에서 중복을 합치고, 가장 완전한 정보만 남깁니다.<br><br>
+          <strong>우선순위:</strong> DOI ▶ arXiv ID ▶ OpenAlex ID ▶ S2 ID ▶ 제목 지문<br>
+          (DOI가 가장 믿을 수 있는 식별자)
+        </div>
+        <div class="step-note">
+          INPUT: ~150개 (중복 포함)<br>
+          OUTPUT: ~80-100개 (중복 제거된 유니크 논문)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-pink">04</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#ff6b9d;">점수 계산 (Score)</span>
+          <span class="step-eng">Scoring with TF-IDF</span>
+          <span class="tag">scorer.py</span>
+        </div>
+        <div class="step-desc">
+          각 논문의 제목+초록이 내 관심 주제와 얼마나 비슷한지 수학적으로 계산합니다.<br><br>
+          <strong style="color:#ffd93d;">TF-IDF + Cosine Similarity</strong> 알고리즘:
+          "단어 빈도"를 기반으로 텍스트 유사도를 0.0 ~ 1.0 사이 점수로 환산합니다.<br>
+          LLM (ChatGPT 같은 AI)을 사용하지 않아서 항상 같은 결과가 나옵니다.
+        </div>
+        <div class="step-note">
+          INPUT: 중복 제거된 논문들<br>
+          OUTPUT: 각 논문에 score 필드 추가 (예: 0.73)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-yell">05</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#ffd93d;">필터링 (Filter)</span>
+          <span class="step-eng">Accept / Reject</span>
+          <span class="tag">run.py</span>
+        </div>
+        <div class="step-desc">
+          설정된 최소 점수 기준을 넘는 논문은 <strong style="color:#4ade80;">채택(ACCEPT)</strong>,<br>
+          못 넘는 논문은 <strong style="color:#f87171;">탈락(REJECT)</strong>으로 분류됩니다.<br><br>
+          탈락 이유: 점수 미달 / 연도 범위 밖 / 제목·URL 없음
+        </div>
+        <div class="step-note">
+          INPUT: 점수가 붙은 논문들<br>
+          OUTPUT: accepted 목록 + rejected 목록 (이유 포함)
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-green">06</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#4ade80;">저장 & 게시 (Publish)</span>
+          <span class="step-eng">Save & Publish</span>
+          <span class="tag">publisher.py</span>
+        </div>
+        <div class="step-desc">
+          결과를 파일로 저장하고 웹사이트 데이터를 업데이트합니다.<br><br>
+          — <code>data/papers.ndjson</code>에 새 논문 추가<br>
+          — <code>data/rejects.ndjson</code>에 탈락 논문 추가<br>
+          — <code>data/run_history.ndjson</code>에 이번 실행 기록 저장<br>
+          — <code>site/data/*.json</code>에 웹용 JSON 복사
+        </div>
+        <div class="step-note">
+          INPUT: accepted + rejected 논문 목록<br>
+          OUTPUT: 업데이트된 파일들 → 웹사이트 자동 갱신
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 (No line) -->
+    <div class="pipeline-step">
+      <div class="step-num">
+        <div class="step-circle c-teal">07</div>
+      </div>
+      <div class="step-content">
+        <div class="step-header">
+          <span class="step-name" style="color:#4ecdc4;">완료 (Done)</span>
+          <span class="step-eng">Status → idle</span>
+        </div>
+        <div class="step-desc">
+          상태가 "idle"로 바뀌고, 웹 프론트엔드가 3초 후 자동으로 새 데이터를 불러옵니다.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pipeline -->
+
+  <!-- Status flow -->
+  <div style="margin-top:24px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:8px; letter-spacing:1px;">/ STATUS PROGRESSION (파이프라인 진행 상태) /</div>
+    <div class="flow-row">
+      <div class="flow-box c-orange">crawling</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-purple">deduplicating</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-pink">scoring</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-yell">filtering</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-teal">publishing</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box c-green">idle</div>
+    </div>
+    <p style="font-size:0.78rem; color:#8892a4; margin-top:8px;">
+      웹사이트 우측 상단의 상태 카드(Status Card)에서 이 진행 상황을 실시간으로 볼 수 있습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 04 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="structure">
+  <div class="section-title">04. 파일 구조 <span>File Structure</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 비유 /</div>
+    <p style="font-size:0.85rem;">
+      프로젝트 폴더를 "사무실"에 비유하면:
+      <code>app/</code>은 직원들(각 역할을 하는 Python 코드),
+      <code>data/</code>는 캐비닛(데이터 파일),
+      <code>site/</code>는 진열장(웹사이트)입니다.
+    </p>
+  </div>
+
+  <div style="margin-top:20px;" class="code scroll-x">
+<pre>
+paper-discovery/
+│
+├── <span style="color:#ffd93d;">app/</span>                    ← Python 백엔드 (핵심 엔진)
+│   ├── <span style="color:#5b73ff;">run.py</span>              ← 총괄 지휘자 (파이프라인 실행)
+│   ├── <span style="color:#4ecdc4;">config.py</span>           ← 설정 로더
+│   ├── <span style="color:#fb923c;">fetcher.py</span>          ← 논문 수집기 (3개 API)
+│   ├── <span style="color:#c084fc;">deduplicator.py</span>     ← 중복 제거기
+│   ├── <span style="color:#ff6b9d;">scorer.py</span>           ← TF-IDF 점수 계산기
+│   ├── <span style="color:#8892a4;">store.py</span>            ← 파일 읽기/쓰기 도우미
+│   └── <span style="color:#4ade80;">publisher.py</span>        ← 결과 저장 & 웹사이트 업데이트
+│
+├── <span style="color:#ffd93d;">data/</span>                   ← 데이터 저장소 (append-only)
+│   ├── survey_config.json   ← ⭐ 핵심 설정파일 (주제, 질문, 임계값)
+│   ├── papers.ndjson        ← 채택된 논문들 (줄마다 JSON 1개)
+│   ├── rejects.ndjson       ← 탈락된 논문들 (이유 포함)
+│   ├── run_history.ndjson   ← 실행 기록들
+│   ├── changelog.md         ← 사람이 읽기 좋은 변경 로그
+│   └── system_status.json   ← 현재 파이프라인 상태
+│
+├── <span style="color:#ffd93d;">site/</span>                   ← 웹 프론트엔드 (React)
+│   ├── index.html           ← HTML 껍데기 (React 마운트 포인트)
+│   ├── app.js               ← React 앱 (696줄 — 모든 UI 로직)
+│   ├── styles.css           ← 스타일 & 애니메이션
+│   └── data/               ← Python이 생성한 JSON 미러
+│       ├── papers.json
+│       ├── rejects.json
+│       ├── run_history.json
+│       └── system_status.json
+│
+├── requirements.txt         ← Python 패키지 목록
+├── .env                     ← 비밀 API 키 (git에 올리지 않음)
+└── .env.example             ← .env 템플릿
+</pre>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 05 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="data-flow">
+  <div class="section-title">05. 데이터 흐름 <span>Data Flow</span></div>
+
+  <div style="margin-top:8px;">
+
+    <!-- Source boxes -->
+    <div class="grid-3">
+      <div class="df-box c-blue">
+        <div class="df-label">SOURCE 1</div>
+        <div class="df-name">arXiv API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">XML Feed → feedparser</div>
+      </div>
+      <div class="df-box c-teal">
+        <div class="df-label">SOURCE 2</div>
+        <div class="df-name">Semantic Scholar API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">REST API → JSON</div>
+      </div>
+      <div class="df-box c-purple">
+        <div class="df-label">SOURCE 3</div>
+        <div class="df-name">OpenAlex API</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">REST API → JSON</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ fetcher.py가 동시에 3곳에 요청</div>
+
+    <div class="df-box c-orange" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">RAW CANDIDATES</div>
+      <div class="df-name">원본 후보 논문 ~150개</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">18개 필드를 가진 딕셔너리 리스트</div>
+    </div>
+
+    <div class="df-arrow">▼ deduplicator.py가 중복 제거</div>
+
+    <div class="df-box c-purple" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">UNIQUE PAPERS</div>
+      <div class="df-name">유니크 논문 ~80-100개</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">각 논문에 paper_id 부여, source_hits 병합</div>
+    </div>
+
+    <div class="df-arrow">▼ scorer.py가 점수 계산</div>
+
+    <div class="df-box c-pink" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">SCORED PAPERS</div>
+      <div class="df-name">점수 붙은 논문들</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">score: 0.0 ~ 1.0 필드 추가</div>
+    </div>
+
+    <div class="df-arrow">▼ run.py가 임계값으로 분류</div>
+
+    <div class="grid-2" style="max-width:500px; margin:0 auto;">
+      <div class="df-box c-green">
+        <div class="df-label">ACCEPTED</div>
+        <div class="df-name">채택 논문</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">score ≥ min_relevance_score</div>
+      </div>
+      <div class="df-box c-red">
+        <div class="df-label">REJECTED</div>
+        <div class="df-name">탈락 논문</div>
+        <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">+ reject_reason 필드</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ publisher.py가 저장</div>
+
+    <div class="grid-3">
+      <div class="df-box c-yell">
+        <div class="df-label">data/papers.ndjson</div>
+        <div class="df-name">논문 DB</div>
+      </div>
+      <div class="df-box c-orange">
+        <div class="df-label">data/rejects.ndjson</div>
+        <div class="df-name">탈락 DB</div>
+      </div>
+      <div class="df-box c-purple">
+        <div class="df-label">data/run_history.ndjson</div>
+        <div class="df-name">실행 기록</div>
+      </div>
+    </div>
+
+    <div class="df-arrow">▼ site/data/ 에 JSON으로 미러링</div>
+
+    <div class="df-box c-teal" style="max-width:400px; margin:0 auto;">
+      <div class="df-label">REACT FRONTEND</div>
+      <div class="df-name">브라우저에서 site/index.html 열기</div>
+      <div style="font-size:0.72rem; color:#8892a4; margin-top:4px;">
+        JSON 파일 로드 → UI 렌더링 → 필터/검색/즐겨찾기
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Paper fields diagram -->
+  <div style="margin-top:32px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 논문 데이터 구조 (Paper Object Fields) /</div>
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#5b73ff; font-size:0.82rem;">식별자 (IDs)</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            paper_id — 내부 고유 ID<br>
+            arxiv_id — arXiv 논문 번호<br>
+            doi — 국제 표준 논문 번호<br>
+            openalex_id — OpenAlex ID<br>
+            semantic_scholar_id — S2 ID
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#4ecdc4; font-size:0.82rem;">내용 (Content)</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            title — 논문 제목<br>
+            abstract — 초록<br>
+            authors — 저자 목록<br>
+            year — 출판 연도<br>
+            published_date — 날짜
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#fb923c; font-size:0.82rem;">메타데이터 (Meta)</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            source — 최초 발견 소스<br>
+            source_hits — 발견된 소스 목록<br>
+            score — 관련도 점수 (0~1)<br>
+            run_id — 어느 실행에서 추가됐나
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title" style="color:#c084fc; font-size:0.82rem;">링크 (Links)</div>
+          <p style="font-size:0.78rem; line-height:2;">
+            url — 논문 페이지 URL<br>
+            pdf_url — PDF 다운로드 링크
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 06 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="config">
+  <div class="section-title">06. 설정 방법 <span>Configuration</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 핵심 설정 파일: data/survey_config.json /</div>
+    <p style="font-size:0.85rem;">이 파일 하나를 수정하면 무엇을 검색할지, 얼마나 엄격하게 필터링할지 모두 바꿀 수 있습니다.</p>
+  </div>
+
+  <div class="code" style="margin-top:16px;">
+<pre>
+{
+  <span style="color:#4ecdc4;">"topic_overview"</span>: <span style="color:#ffd93d;">"artificial intelligence"</span>,
+  <span class="comment">// ↑ 메인 주제. 한 문장으로 어떤 분야인지 설명</span>
+
+  <span style="color:#4ecdc4;">"research_questions"</span>: [
+    <span style="color:#ffd93d;">"What methods are used to make AI systems explainable?"</span>,
+    <span style="color:#ffd93d;">"How can AI be applied to healthcare diagnosis?"</span>
+  ],
+  <span class="comment">// ↑ 구체적으로 알고 싶은 질문들. 많을수록 검색이 정밀해짐</span>
+
+  <span style="color:#4ecdc4;">"query_hints"</span>: [<span style="color:#ffd93d;">"XAI"</span>, <span style="color:#ffd93d;">"explainability"</span>, <span style="color:#ffd93d;">"interpretability"</span>],
+  <span class="comment">// ↑ 추가 키워드. 전문 약어나 동의어를 넣으면 효과적</span>
+
+  <span style="color:#4ecdc4;">"timeline_from_year"</span>: <span style="color:#fb923c;">2020</span>,
+  <span style="color:#4ecdc4;">"timeline_to_year"</span>: <span style="color:#fb923c;">2026</span>,
+  <span class="comment">// ↑ 이 연도 범위 밖의 논문은 자동 탈락</span>
+
+  <span style="color:#4ecdc4;">"min_relevance_score"</span>: <span style="color:#fb923c;">0.05</span>
+  <span class="comment">// ↑ 최소 관련도 점수. 0.05 = 5%. 높일수록 엄격 (0.0~1.0)</span>
+}
+</pre>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 환경변수 (.env 파일) /</div>
+    <div class="code">
+<pre>
+<span style="color:#4ecdc4;">S2_API_KEY</span>=<span style="color:#ffd93d;">your_api_key_here</span>
+<span class="comment"># Semantic Scholar API 키 (없어도 되지만 있으면 더 많은 결과)</span>
+<span class="comment"># https://www.semanticscholar.org/product/api 에서 무료 발급 가능</span>
+
+<span style="color:#4ecdc4;">DAYS_BACK</span>=<span style="color:#fb923c;">7</span>
+<span class="comment"># 최근 며칠치 논문을 가져올지 (기본값: 7일)</span>
+
+<span style="color:#4ecdc4;">MAX_PER_SOURCE</span>=<span style="color:#fb923c;">50</span>
+<span class="comment"># 소스당 최대 논문 수 (기본값: 50)</span>
+</pre>
+    </div>
+  </div>
+
+  <!-- Score threshold guide -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ min_relevance_score 가이드 /</div>
+    <div class="scroll-x">
+      <table>
+        <tr>
+          <th>값</th><th>의미</th><th>언제 쓸까?</th>
+        </tr>
+        <tr>
+          <td>0.03 ~ 0.05</td>
+          <td>매우 낮음 (관대)</td>
+          <td>관련 논문이 너무 적게 나올 때, 탐색 초기</td>
+        </tr>
+        <tr>
+          <td>0.10 ~ 0.20</td>
+          <td>보통</td>
+          <td>일반적인 사용 (추천)</td>
+        </tr>
+        <tr>
+          <td>0.30 ~ 0.50</td>
+          <td>높음 (엄격)</td>
+          <td>매우 구체적인 주제, 정밀도 우선</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 07 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="run">
+  <div class="section-title">07. 실행 방법 <span>How to Run</span></div>
+
+  <div class="grid-2">
+    <div>
+      <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 1. 처음 설치 (One-time setup) /</div>
+      <div class="code">
+<pre>
+<span class="comment"># 패키지 설치</span>
+<span class="cmd">pip install -r requirements.txt</span>
+
+<span class="comment"># .env 파일 생성</span>
+<span class="cmd">cp .env.example .env</span>
+<span class="comment"># .env 파일 열어서 API 키 입력</span>
+</pre>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 2. 파이프라인 실행 /</div>
+      <div class="code">
+<pre>
+<span class="comment"># 기본 실행</span>
+<span class="cmd">python -m app.run</span>
+
+<span class="comment"># 주제 임시 변경</span>
+<span class="cmd">python -m app.run --topic "robotics"</span>
+
+<span class="comment"># 최근 14일치 논문 검색</span>
+<span class="cmd">python -m app.run --days-back 14</span>
+
+<span class="comment"># 테스트 (파일 저장 안 함)</span>
+<span class="cmd">python -m app.run --dry-run</span>
+</pre>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:10px; letter-spacing:1px;">/ 3. 웹사이트 보기 /</div>
+    <div class="code">
+<pre>
+<span class="comment"># 간단한 웹 서버 실행 (site 폴더에서)</span>
+<span class="cmd">cd site && python -m http.server 8080</span>
+
+<span class="comment"># 브라우저에서 열기</span>
+<span class="comment"># → http://localhost:8080</span>
+</pre>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 실행 후 나오는 출력 예시 /</div>
+    <div class="code">
+<pre>
+<span style="color:#5b73ff;">──────────────────────────────</span>
+<span style="color:#ffd93d;">  PaperFeed Run Summary</span>
+<span style="color:#5b73ff;">──────────────────────────────</span>
+  Topic        artificial intelligence
+  Sources      arXiv · S2 · OpenAlex
+  Raw found    143
+  After dedup  89
+  Accepted     21     <span style="color:#4ade80;">← 관련 논문</span>
+  Rejected     68     <span style="color:#f87171;">← 탈락 논문</span>
+  Site updated ✓
+<span style="color:#5b73ff;">──────────────────────────────</span>
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 08 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="debug">
+  <div class="section-title">08. 디버깅 가이드 <span>Debugging</span></div>
+
+  <div class="analogy">
+    <div class="analogy-label">/ 자주 발생하는 문제와 해결법 /</div>
+    <p style="font-size:0.85rem;">문제가 생겼을 때 이 체크리스트를 순서대로 확인하세요.</p>
+  </div>
+
+  <div style="margin-top:20px;">
+
+    <div class="debug-item" style="border-color:#f87171;">
+      <div class="debug-title" style="color:#f87171;">문제 1: 논문이 하나도 안 나온다 (0 papers accepted)</div>
+      <div class="debug-cause">원인: min_relevance_score가 너무 높거나, 검색 쿼리가 너무 좁음</div>
+      <div class="debug-fix">
+        해결:
+        1. data/survey_config.json에서 min_relevance_score를 0.05로 낮추기<br>
+        2. --dry-run으로 실행해서 scorer.py 출력 확인 (min/max/mean 점수)<br>
+        3. query_hints에 더 일반적인 키워드 추가
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#fb923c;">
+      <div class="debug-title" style="color:#fb923c;">문제 2: Semantic Scholar에서 에러 (429 Too Many Requests)</div>
+      <div class="debug-cause">원인: API 속도 제한 초과 — API 키 없이 사용 중</div>
+      <div class="debug-fix">
+        해결:
+        1. semanticscholar.org에서 무료 API 키 발급<br>
+        2. .env 파일에 S2_API_KEY=your_key_here 추가<br>
+        3. 키 없이도 작동은 하나, 결과가 줄어들 수 있음
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#ffd93d;">
+      <div class="debug-title" style="color:#ffd93d;">문제 3: 웹사이트가 업데이트 안 됨 (논문이 안 보임)</div>
+      <div class="debug-cause">원인: site/data/ 폴더의 JSON이 갱신 안 됐거나, 브라우저 캐시</div>
+      <div class="debug-fix">
+        해결:
+        1. python -m app.run을 다시 실행했는지 확인<br>
+        2. data/system_status.json의 last_run 시간 확인<br>
+        3. 브라우저에서 강력 새로고침 (Ctrl+Shift+R / Cmd+Shift+R)<br>
+        4. site/data/ 폴더에 papers.json이 있는지 확인
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#c084fc;">
+      <div class="debug-title" style="color:#c084fc;">문제 4: ModuleNotFoundError (모듈 없음 에러)</div>
+      <div class="debug-cause">원인: 의존 패키지가 설치되지 않음</div>
+      <div class="debug-fix">
+        해결: pip install -r requirements.txt 실행<br>
+        필요 패키지: httpx, feedparser, scikit-learn, python-dateutil
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#4ecdc4;">
+      <div class="debug-title" style="color:#4ecdc4;">문제 5: 같은 논문이 중복으로 보인다</div>
+      <div class="debug-cause">원인: 논문에 DOI나 arXiv ID가 없어서 제목 지문으로 dedup 실패</div>
+      <div class="debug-fix">
+        해결:
+        1. data/papers.ndjson에서 paper_id 중복 여부 수동 확인<br>
+        2. 이전 papers.ndjson 데이터와의 중복 → publisher.py의 existing_ids 확인<br>
+        3. 대부분은 arXiv 논문에서 발생하지 않음 (arXiv ID 명확)
+      </div>
+    </div>
+
+    <div class="debug-item" style="border-color:#5b73ff;">
+      <div class="debug-title" style="color:#5b73ff;">문제 6: 웹사이트에서 CORS 에러 (파일을 직접 열 때)</div>
+      <div class="debug-cause">원인: file:// 프로토콜로 직접 index.html 열면 JSON 로드 불가</div>
+      <div class="debug-fix">
+        해결: 반드시 웹 서버를 통해 접근해야 함<br>
+        cd site && python -m http.server 8080<br>
+        → http://localhost:8080 으로 접속
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Debug checklist -->
+  <div style="margin-top:24px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 디버깅 체크리스트 (순서대로 확인) /</div>
+    <div class="code">
+<pre>
+<span class="comment">□ 1. .env 파일 존재 확인</span>
+   ls -la .env
+
+<span class="comment">□ 2. data/survey_config.json 문법 확인</span>
+   python -c "import json; json.load(open('data/survey_config.json'))"
+
+<span class="comment">□ 3. 마지막 실행 상태 확인</span>
+   cat data/system_status.json
+
+<span class="comment">□ 4. 논문 수 확인</span>
+   wc -l data/papers.ndjson
+
+<span class="comment">□ 5. 가장 최근 실행 기록 확인</span>
+   tail -1 data/run_history.ndjson
+
+<span class="comment">□ 6. 테스트 실행 (아무것도 저장 안 함)</span>
+   python -m app.run --dry-run
+
+<span class="comment">□ 7. site/data/ 폴더 파일 확인</span>
+   ls -la site/data/
+</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────── -->
+<!-- SECTION 09 -->
+<!-- ─────────────────────────────────────────────── -->
+<section id="components">
+  <div class="section-title">09. 각 파일 역할 요약 <span>Component Summary</span></div>
+
+  <div class="scroll-x">
+    <table>
+      <tr>
+        <th>파일</th>
+        <th>언어</th>
+        <th>역할 (한국어)</th>
+        <th>핵심 기능</th>
+      </tr>
+      <tr>
+        <td>app/run.py</td>
+        <td>Python</td>
+        <td>총괄 지휘자</td>
+        <td>파이프라인 전체 실행, 상태 업데이트, CLI 진입점</td>
+      </tr>
+      <tr>
+        <td>app/config.py</td>
+        <td>Python</td>
+        <td>설정 로더</td>
+        <td>survey_config.json + .env 읽어서 SurveyConfig 객체 반환</td>
+      </tr>
+      <tr>
+        <td>app/fetcher.py</td>
+        <td>Python</td>
+        <td>논문 수집기</td>
+        <td>arXiv/S2/OpenAlex API 비동기 호출, 논문 정규화</td>
+      </tr>
+      <tr>
+        <td>app/deduplicator.py</td>
+        <td>Python</td>
+        <td>중복 제거기</td>
+        <td>DOI→arXiv ID→제목 우선순위로 중복 병합</td>
+      </tr>
+      <tr>
+        <td>app/scorer.py</td>
+        <td>Python</td>
+        <td>관련도 채점기</td>
+        <td>TF-IDF 코사인 유사도 계산 (0.0~1.0 점수)</td>
+      </tr>
+      <tr>
+        <td>app/store.py</td>
+        <td>Python</td>
+        <td>파일 입출력</td>
+        <td>NDJSON 읽기/쓰기, JSON 저장</td>
+      </tr>
+      <tr>
+        <td>app/publisher.py</td>
+        <td>Python</td>
+        <td>결과 게시자</td>
+        <td>data/ 저장 + site/data/ 미러링 + 상태 업데이트</td>
+      </tr>
+      <tr>
+        <td>site/app.js</td>
+        <td>React (JSX)</td>
+        <td>웹 뷰어</td>
+        <td>논문 브라우저 UI, 필터/검색/즐겨찾기, 3초 폴링</td>
+      </tr>
+      <tr>
+        <td>site/styles.css</td>
+        <td>CSS</td>
+        <td>스타일</td>
+        <td>애니메이션, 다크모드, 소스별 배지 색상</td>
+      </tr>
+      <tr>
+        <td>data/survey_config.json</td>
+        <td>JSON</td>
+        <td>⭐ 핵심 설정</td>
+        <td>주제, 질문, 키워드, 임계값 → 여기만 바꾸면 됨</td>
+      </tr>
+    </table>
+  </div>
+
+  <hr>
+
+  <!-- Frontend components -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 웹 UI 구성 요소 (site/app.js 컴포넌트) /</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color:#5b73ff;">App <span class="badge c-blue">Root</span></div>
+        <p>최상위 컴포넌트. 탭 전환(Papers/History), 다크모드 토글, 전체 데이터 로딩 담당</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#4ecdc4;">StatusCard</div>
+        <p>우측 상단의 파이프라인 상태 표시 (idle / crawling 등). 3초마다 갱신</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#fb923c;">PapersPage</div>
+        <p>메인 논문 목록 페이지. 사이드바 필터(소스, 연도, 점수), 검색박스, 정렬 포함</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#ffd93d;">PaperCard</div>
+        <p>논문 1개를 표시하는 카드. 제목, 저자, 관련도 바, 출처 배지, 즐겨찾기 버튼</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#c084fc;">MonthGroup</div>
+        <p>논문을 출판 월별로 묶어서 접을 수 있는 섹션으로 표시</p>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:#f87171;">HistoryPage</div>
+        <p>실행 이력 탭. 각 실행에서 몇 개 발견했는지, 소스별 통계</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- localStorage -->
+  <div style="margin-top:20px;">
+    <div style="font-size:0.78rem; color:#8892a4; margin-bottom:12px; letter-spacing:1px;">/ 브라우저 로컬 저장 (localStorage) /</div>
+    <div class="code">
+<pre>
+<span style="color:#4ecdc4;">paperfeed_starred</span>  ← 즐겨찾기한 논문 ID 목록 (★ 버튼 클릭 시 저장)
+<span style="color:#4ecdc4;">paperfeed_deleted</span>  ← 숨긴 논문 ID 목록 (페이지 새로고침해도 유지)
+<span style="color:#4ecdc4;">paperfeed_dark</span>     ← 다크모드 설정 (true/false)
+
+<span class="comment">→ 서버나 DB 없이도 사용자 설정이 브라우저에 저장됩니다</span>
+</pre>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<div style="text-align:center; padding:20px; color:#8892a4; font-size:0.78rem;">
+  PaperFeed Project Guide — 2026-06-14<br>
+  Generated for /Users/usung_01/Desktop/Claude/paper-discovery
+</div>
+
+</body>
+</html>

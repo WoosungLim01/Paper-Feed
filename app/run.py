@@ -2,10 +2,11 @@
 PaperFeed CLI entrypoint.
 
 Usage:
-  python -m app.run                      # run pipeline with defaults
-  python -m app.run --topic "robotics"   # override topic for one run
-  python -m app.run --days-back 14       # override days_back
-  python -m app.run --dry-run            # run pipeline but skip file writes
+  python -m app.run                    # run pipeline (TF-IDF + SBERT run simultaneously)
+  python -m app.run --topic "robotics" # override topic for one run
+  python -m app.run --days-back 14     # override days_back
+  python -m app.run --dry-run          # run pipeline but skip file writes
+  python -m app.run --reset-cache      # delete SBERT embedding cache
 """
 import argparse
 import asyncio
@@ -42,8 +43,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _write_status(data_dir: str, site_dir: str, status: str, last_run=None, dry_run=False):
-    payload = {"status": status, "last_run": last_run}
+def _write_status(
+    data_dir: str,
+    site_dir: str,
+    status: str,
+    last_run: str | None = None,
+    dry_run: bool = False,
+) -> None:
+    """Write system_status.json to both data/ and site/data/."""
+    payload: dict = {"status": status, "last_run": last_run, "scorer": "dual"}
     if not dry_run:
         write_json(os.path.join(data_dir, "system_status.json"), payload)
         site_data = os.path.join(site_dir, "data")
@@ -58,32 +66,49 @@ def _print_summary(
     accepted_count: int,
     rejected_count: int,
     site_updated: bool,
-):
-    w = 33
+    cache_status: str,
+) -> None:
+    w = 36
     line = "─" * w
     print(f"┌{line}┐")
     print(f"│ {'PaperFeed Run Summary':<{w-1}}│")
     print(f"├{line}┤")
-    print(f"│ {'Sources crawled':<20}: {sources_crawled:<{w-23}}│")
-    print(f"│ {'Raw candidates':<20}: {raw_count:<{w-23}}│")
-    print(f"│ {'After dedup':<20}: {dedup_count:<{w-23}}│")
-    print(f"│ {'Accepted':<20}: {accepted_count:<{w-23}}│")
-    print(f"│ {'Rejected':<20}: {rejected_count:<{w-23}}│")
-    print(f"│ {'Site updated':<20}: {'Yes' if site_updated else 'No':<{w-23}}│")
+    print(f"│ {'Sources crawled':<22}: {sources_crawled:<{w-25}}│")
+    print(f"│ {'Raw candidates':<22}: {raw_count:<{w-25}}│")
+    print(f"│ {'After dedup':<22}: {dedup_count:<{w-25}}│")
+    print(f"│ {'Accepted':<22}: {accepted_count:<{w-25}}│")
+    print(f"│ {'Rejected':<22}: {rejected_count:<{w-25}}│")
+    print(f"│ {'Site updated':<22}: {'Yes' if site_updated else 'No':<{w-25}}│")
+    print(f"│ {'Scorer':<22}: {'TF-IDF + SBERT (dual)':<{w-25}}│")
+    print(f"│ {'Cache':<22}: {cache_status:<{w-25}}│")
     print(f"└{line}┘")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="PaperFeed pipeline")
-    parser.add_argument("--topic", type=str, default=None, help="Override topic_overview")
-    parser.add_argument("--days-back", type=int, default=None, help="Override DAYS_BACK")
-    parser.add_argument("--dry-run", action="store_true", help="Skip file writes")
+    parser.add_argument("--topic", type=str, default=None,
+                        help="Override topic_overview")
+    parser.add_argument("--days-back", type=int, default=None,
+                        help="Override DAYS_BACK")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Skip file writes")
+    parser.add_argument(
+        "--reset-cache",
+        action="store_true",
+        help="Reset SBERT embedding cache and re-run",
+    )
     args = parser.parse_args()
 
     data_dir = _cfg.DATA_DIR
     site_dir = _cfg.SITE_DIR
     days_back = args.days_back if args.days_back is not None else _cfg.DAYS_BACK
     dry_run = args.dry_run
+
+    # ── Reset cache (if requested) ───────────────────────────────────────────
+    if args.reset_cache:
+        from app.cache import reset_cache
+        reset_cache()
+        print("[Cache] Reset complete")
 
     # 1. Load config
     config = load_config(data_dir)
@@ -123,7 +148,8 @@ def main():
     # 7. Status: scoring
     _write_status(data_dir, site_dir, "scoring", dry_run=dry_run)
 
-    # 8. Score
+    # 8. Score: TF-IDF + SBERT run simultaneously
+    logger.info("Scoring: TF-IDF + SBERT (dual)")
     candidates = score_papers(candidates, config)
 
     # 9. Status: filtering
@@ -163,6 +189,7 @@ def main():
         "run_id": run_id,
         "timestamp": timestamp,
         "architecture": "baseline",
+        "scorer": "dual",
         "topic": config.topic_overview,
         "queries": queries,
         "source_counts": source_counts,
@@ -176,7 +203,6 @@ def main():
     # 13. Publish (unless dry-run)
     site_updated = False
     if not dry_run:
-        import json as _json
         config_dict = {
             "topic_overview": config.topic_overview,
             "research_questions": config.research_questions,
@@ -186,7 +212,7 @@ def main():
             "timeline_to_year": config.timeline_to_year,
             "min_relevance_score": config.min_relevance_score,
         }
-        publish(accepted, rejected, run_record, config_dict, data_dir, site_dir)
+        publish(accepted, rejected, run_record, config_dict, data_dir, site_dir, config)
         site_updated = True
     else:
         logger.info("Dry-run mode: skipping file writes.")
@@ -194,7 +220,12 @@ def main():
     # 14. Final status: idle
     _write_status(data_dir, site_dir, "idle", last_run=timestamp, dry_run=dry_run)
 
-    # 15. Print summary
+    # 15. Cache info
+    from app.cache import cache_info
+    info = cache_info()
+    cache_status = f"{info['count']} cached ({info['size_kb']} KB)" if info.get("exists") else "No cache"
+
+    # 16. Print summary
     _print_summary(
         sources_crawled=3,
         raw_count=raw_count,
@@ -202,6 +233,7 @@ def main():
         accepted_count=len(accepted),
         rejected_count=len(rejected),
         site_updated=site_updated,
+        cache_status=cache_status,
     )
 
 

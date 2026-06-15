@@ -49,16 +49,13 @@ function loadStarred() {
   try { return new Set(JSON.parse(localStorage.getItem("paperfeed_starred") || "[]")); }
   catch { return new Set(); }
 }
-
 function saveStarred(s) {
   localStorage.setItem("paperfeed_starred", JSON.stringify([...s]));
 }
-
 function loadDeleted() {
   try { return new Set(JSON.parse(localStorage.getItem("paperfeed_deleted") || "[]")); }
   catch { return new Set(); }
 }
-
 function saveDeleted(s) {
   localStorage.setItem("paperfeed_deleted", JSON.stringify([...s]));
 }
@@ -77,10 +74,36 @@ function SkeletonCard() {
   );
 }
 
+// ─── ScoreBar ────────────────────────────────────────────────────────────────
+
+function ScoreBar({ label, value, color, bold = false }) {
+  const pct = Math.min((value ?? 0) * 100, 100);
+  return (
+    <div className={`flex items-center gap-2 ${bold ? "mt-1.5" : "mt-0.5"}`}>
+      <span
+        className={`text-xs flex-shrink-0 ${bold ? "font-bold w-20" : "w-20"}`}
+        style={{ color }}
+      >
+        {label}
+      </span>
+      <div className={`flex-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden ${bold ? "h-2" : "h-1.5"}`}>
+        <div
+          className="h-full rounded-full similarity-bar"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-right flex-shrink-0">
+        {pct.toFixed(0)}%
+      </span>
+    </div>
+  );
+}
+
 // ─── PaperCard ───────────────────────────────────────────────────────────────
 
-function PaperCard({ paper, isReject, starred, onStar }) {
+function PaperCard({ paper, isReject, starred, onStar, scorer }) {
   const [expanded, setExpanded] = useState(false);
+
   const abstract = paper.abstract || "";
   const shortAbstract = abstract.slice(0, 220);
   const showToggle = abstract.length > 220;
@@ -91,8 +114,13 @@ function PaperCard({ paper, isReject, starred, onStar }) {
       : authors.join(", ");
   const sourceHits = paper.source_hits || [paper.source].filter(Boolean);
   const isMulti = sourceHits.length > 1;
-  const score = paper.score || 0;
   const pid = paper.paper_id || paper.candidate_id;
+
+  // Use only each algorithm's own score (no fallback — null if absent)
+  const tfidfScore = paper.tfidf_score ?? null;
+  const sbertScore = paper.sbert_score ?? null;
+  // Older papers with neither score use the legacy score field for single display
+  const legacyScore = (tfidfScore == null && sbertScore == null) ? (paper.score ?? null) : null;
 
   const borderCls = starred
     ? "border-yellow-400 dark:border-yellow-500"
@@ -155,17 +183,17 @@ function PaperCard({ paper, isReject, starred, onStar }) {
         </p>
       )}
 
-      {/* Similarity bar */}
-      <div className="flex items-center gap-2 mt-2">
-        <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className="h-1.5 bg-indigo-500 rounded-full similarity-bar"
-            style={{ width: `${Math.min(score * 100, 100)}%` }}
-          ></div>
-        </div>
-        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-          {(score * 100).toFixed(0)}% match
-        </span>
+      {/* Score bars: TF-IDF + SBERT shown separately (legacy papers show single score bar) */}
+      <div className="mt-2 space-y-1">
+        {tfidfScore != null && (
+          <ScoreBar label="TF-IDF" value={tfidfScore} color="#5b73ff" />
+        )}
+        {sbertScore != null && (
+          <ScoreBar label="SBERT+FAISS" value={sbertScore} color="#c084fc" />
+        )}
+        {legacyScore != null && (
+          <ScoreBar label="Score" value={legacyScore} color="#94a3b8" />
+        )}
       </div>
 
       {/* paper_id chip */}
@@ -180,7 +208,7 @@ function PaperCard({ paper, isReject, starred, onStar }) {
 
 // ─── MonthGroup ──────────────────────────────────────────────────────────────
 
-function MonthGroup({ month, papers, starred, onStar }) {
+function MonthGroup({ month, papers, starred, onStar, scorer }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="mb-6">
@@ -200,6 +228,7 @@ function MonthGroup({ month, papers, starred, onStar }) {
             isReject={false}
             starred={starred.has(pid)}
             onStar={onStar}
+            scorer={scorer}
           />
         );
       })}
@@ -220,6 +249,14 @@ function StatusCard({ status, papersCount }) {
   };
   const { label, cls } = statusMap[status?.status] || { label: status?.status || "Unknown", cls: "text-gray-500" };
 
+  // Scorer badge styles
+  const scorerBadge = {
+    dual:  { label: "TF-IDF + SBERT", cls: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" },
+    tfidf: { label: "TF-IDF",         cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
+    sbert: { label: "SBERT+FAISS",    cls: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" },
+  };
+  const badge = scorerBadge[status?.scorer] || scorerBadge.dual;
+
   return (
     <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
       <div className={`font-semibold text-sm ${cls}`}>{label}</div>
@@ -228,6 +265,11 @@ function StatusCard({ status, papersCount }) {
       </div>
       <div className="text-xs text-gray-500 dark:text-gray-400">
         {papersCount} papers collected
+      </div>
+      <div className="mt-2">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>
+          {badge.label}
+        </span>
       </div>
     </div>
   );
@@ -262,13 +304,18 @@ function HistoryPage({ history, papers, starred, onStar, deleted, onDelete }) {
             {/* Run header */}
             <div className="bg-gray-50 dark:bg-gray-800 px-5 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base font-bold text-gray-900 dark:text-white">
                     {formatDate(run.timestamp)}
                   </span>
-                  <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {run.topic}
                   </span>
+                  {run.scorer && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium">
+                      {run.scorer === "sbert" ? "SBERT" : "TF-IDF"}
+                    </span>
+                  )}
                 </div>
                 <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
                   +{run.new_count ?? paperIds.length} new papers
@@ -326,7 +373,7 @@ function HistoryPage({ history, papers, starred, onStar, deleted, onDelete }) {
                       <div className="flex flex-wrap gap-1 mt-1 items-center">
                         {sourceHits.map(sourceBadge)}
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {(p.score * 100).toFixed(0)}% match
+                          {((p.score ?? 0) * 100).toFixed(0)}% match
                         </span>
                       </div>
                     </div>
@@ -361,15 +408,22 @@ function HistoryPage({ history, papers, starred, onStar, deleted, onDelete }) {
 
 // ─── PapersPage ──────────────────────────────────────────────────────────────
 
-function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted }) {
+function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted, status }) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("score");
+  const [scorerSort, setScorerSort] = useState("score"); // score | tfidf_score | sbert_score
   const [minScore, setMinScore] = useState(0.05);
   const [sources, setSources] = useState({ arxiv: true, semantic_scholar: true, openalex: true });
   const [yearFrom, setYearFrom] = useState(2023);
   const [yearTo, setYearTo] = useState(2026);
   const [showRejects, setShowRejects] = useState(false);
   const [starFilter, setStarFilter] = useState("all"); // all | starred | unread
+
+  const scorer = status?.scorer || "tfidf";
+
+  // Check which score fields exist (determines sidebar option visibility)
+  const hasTfidf = papers.some(p => p.tfidf_score != null || p.score != null);
+  const hasSbert = papers.some(p => p.sbert_score != null);
 
   useEffect(() => {
     if (surveyConfig) {
@@ -381,13 +435,14 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted })
   const filtered = papers
     .filter(p => {
       const pid = p.paper_id || p.candidate_id;
-      if (deleted.has(pid)) return false; // hide deleted papers
+      if (deleted.has(pid)) return false;
       if (starFilter === "starred" && !starred.has(pid)) return false;
       if (starFilter === "unread" && starred.has(pid)) return false;
 
       const src = p.source_hits || [p.source];
       const srcMatch = src.some(s => sources[s]);
-      const scoreMatch = (p.score || 0) >= minScore;
+      const scoreVal = p[scorerSort] ?? p.score ?? 0;
+      const scoreMatch = scoreVal >= minScore;
       const yr = p.year || 0;
       const yearMatch = yr >= yearFrom && yr <= yearTo;
       const q = search.toLowerCase();
@@ -395,7 +450,11 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted })
       return srcMatch && scoreMatch && yearMatch && textMatch;
     })
     .sort((a, b) => {
-      if (sortBy === "score") return (b.score || 0) - (a.score || 0);
+      if (sortBy === "score") {
+        const aVal = a[scorerSort] ?? a.score ?? 0;
+        const bVal = b[scorerSort] ?? b.score ?? 0;
+        return bVal - aVal;
+      }
       if (sortBy === "date") {
         const da = new Date(a.publication_date || `${a.year}-01-01` || 0);
         const db = new Date(b.publication_date || `${b.year}-01-01` || 0);
@@ -442,6 +501,22 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted })
               className="w-full accent-indigo-600"
             />
           </div>
+
+          {/* Sort by algorithm */}
+          {(hasTfidf || hasSbert) && (
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Sort by algorithm</p>
+              <select
+                value={scorerSort}
+                onChange={e => setScorerSort(e.target.value)}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              >
+                {hasTfidf && <option value="tfidf_score">TF-IDF score</option>}
+                {hasSbert && <option value="sbert_score">SBERT score</option>}
+                <option value="score">Default score</option>
+              </select>
+            </div>
+          )}
 
           {/* Sources */}
           <div>
@@ -525,7 +600,14 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted })
 
         {/* Papers grouped by month */}
         {!showRejects && Object.entries(grouped).map(([month, monthPapers]) => (
-          <MonthGroup key={month} month={month} papers={monthPapers} starred={starred} onStar={onStar} />
+          <MonthGroup
+            key={month}
+            month={month}
+            papers={monthPapers}
+            starred={starred}
+            onStar={onStar}
+            scorer={scorer}
+          />
         ))}
 
         {/* Reject panel */}
@@ -538,7 +620,14 @@ function PapersPage({ papers, rejects, surveyConfig, starred, onStar, deleted })
               <p className="text-gray-400 dark:text-gray-600 text-sm">No rejected papers</p>
             )}
             {rejects.map((p, i) => (
-              <PaperCard key={p.paper_id || p.candidate_id || i} paper={p} isReject={true} status={null} onStatus={() => {}} />
+              <PaperCard
+                key={p.paper_id || p.candidate_id || i}
+                paper={p}
+                isReject={true}
+                starred={false}
+                onStar={() => {}}
+                scorer={scorer}
+              />
             ))}
           </div>
         )}
@@ -605,12 +694,17 @@ function App() {
   const handleDelete = useCallback((pid) => {
     setDeleted(prev => {
       const next = new Set(prev);
-      if (next.has(pid)) next.delete(pid); // restore
+      if (next.has(pid)) next.delete(pid);
       else next.add(pid);
       saveDeleted(next);
       return next;
     });
   }, []);
+
+  const tabs = [
+    ["papers",  "Papers"],
+    ["history", "History"],
+  ];
 
   return (
     <div className={`flex flex-col h-screen ${darkMode ? "dark" : ""}`}>
@@ -623,7 +717,7 @@ function App() {
 
         {/* Tabs */}
         <nav className="flex gap-1">
-          {[["papers", "Papers"], ["history", "History"]].map(([val, label]) => (
+          {tabs.map(([val, label]) => (
             <button
               key={val}
               onClick={() => setTab(val)}
@@ -671,6 +765,7 @@ function App() {
             starred={starred}
             onStar={handleStar}
             deleted={deleted}
+            status={status}
           />
         ) : (
           <div className="h-full overflow-y-auto">
